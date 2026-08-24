@@ -1,0 +1,658 @@
+using Unity.Collections;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+
+namespace CoreKeepers
+{
+    public enum WarriorAction : byte { None, Attack, Build, Mine, Deposit, Revive }
+    public enum ContextInteraction : byte { None, AttackEnemy, MineResource, BuildOrRepair, RevivePlayer, DepositResources }
+    public enum CorePlayerClass : byte { Warrior, Mage, Builder, Healer }
+
+    [RequireComponent(typeof(NavMeshAgent))]
+    public sealed class NetworkWarrior : NetworkBehaviour
+    {
+        private const int DefaultCarryingCapacity = 20;
+        private const int BuilderCarryingCapacity = 30;
+        private const ulong NoResurrector = ulong.MaxValue;
+
+        [Header("Point And Click Movement")]
+        [SerializeField, Min(0.1f)] private float movementSpeed = 6f;
+        [SerializeField, Min(0.1f)] private float acceleration = 28f;
+        [SerializeField, Min(1f)] private float rotationSpeed = 720f;
+        [SerializeField, Min(0.1f)] private float groundSampleRadius = 2.5f;
+        [SerializeField, Min(0.01f)] private float heldCommandInterval = 0.05f;
+        [SerializeField, Min(0.01f)] private float groundRetargetDistance = 0.15f;
+        [SerializeField] private CorePlayerClass playerClass = CorePlayerClass.Warrior;
+        [Header("Attack")]
+        [SerializeField, Min(0.05f)] private float attackDuration = 0.62f;
+        [SerializeField, Min(0f)] private float attackCooldown = 0.72f;
+        [SerializeField, Range(5f, 180f)] private float attackArc = 100f;
+        [SerializeField, Min(0.1f)] private float attackRange = 2.3f;
+        [SerializeField, Min(0f)] private float damage = 25f;
+        [Header("Interactions")]
+        [SerializeField, Min(0.1f)] private float buildDuration = 0.75f;
+        [SerializeField, Min(0.1f)] private float mineDuration = 0.8f;
+        [SerializeField, Min(0.1f)] private float mineRange = 1.7f;
+        [SerializeField, Min(0.1f)] private float buildRange = 1.5f;
+        [SerializeField, Min(0.1f)] private float depositDuration = 0.65f;
+        [Header("Resurrection")]
+        [SerializeField, Min(0.1f)] private float resurrectionDuration = 10f;
+        [SerializeField, Min(0.1f)] private float healerResurrectionDuration = 5f;
+        [SerializeField, Range(0.01f, 1f)] private float revivedHealthFraction = 0.3f;
+        [SerializeField, Min(0.01f)] private float resurrectionMoveTolerance = 0.15f;
+        [SerializeField, Min(0.1f)] private float interactionRange = 2.6f;
+        [SerializeField, Min(1)] private int constructionPower = 15;
+        [Header("Hero Stats")]
+        [SerializeField, Min(1)] private int startingLevel = 1;
+        [SerializeField, Min(1f)] private float configuredMaximumHealth = 100f;
+
+        private readonly NetworkVariable<WarriorAction> action = new(WarriorAction.None);
+        private readonly NetworkVariable<double> actionStartedAt = new(0d);
+        private readonly NetworkVariable<double> actionEndsAt = new(0d);
+        private readonly NetworkVariable<byte> actionVariant = new(0);
+        private readonly NetworkVariable<CorePlayerClass> syncedPlayerClass = new(CorePlayerClass.Warrior);
+        private readonly NetworkVariable<int> carriedOre = new(0);
+        private readonly NetworkVariable<int> carriedCoreShards = new(0);
+        private readonly NetworkVariable<int> playerLevel = new(1);
+        private readonly NetworkVariable<float> currentHealth = new(100f);
+        private readonly NetworkVariable<float> maximumHealth = new(100f);
+        private readonly NetworkVariable<FixedString64Bytes> nickname = new(new FixedString64Bytes("Player"));
+        private readonly NetworkVariable<bool> downed = new(false);
+        private readonly NetworkVariable<int> reviveProgress = new(0);
+        private readonly NetworkVariable<ulong> resurrectorId = new(NoResurrector);
+        private readonly NetworkVariable<double> resurrectionStartedAt = new(0d);
+        private readonly NetworkVariable<double> resurrectionEndsAt = new(0d);
+        private NavMeshAgent agent;
+        private NetworkObject interactionTarget;
+        private ContextInteraction interaction;
+        private Vector3 previousPosition;
+        private float normalizedSpeed;
+        private double nextInteractionAt;
+        private float nextHeldCommandAt;
+        private Vector3 lastGroundDestination;
+        private bool hasGroundDestination;
+        private byte nextAttackVariant;
+        private bool preserveSpawnTransform;
+        private NetworkWarrior resurrectionTarget;
+        private Vector3 resurrectionStartPosition;
+        private uint resurrectionDamageRevision;
+        private uint damageRevision;
+        private GameObject playerMarker;
+        private static int lastDebugClassSwitchFrame = -1;
+
+        public static NetworkWarrior Local { get; private set; }
+        public WarriorAction CurrentAction => action.Value;
+        public int CarriedResources => carriedOre.Value + carriedCoreShards.Value;
+        public int CarryingCapacity => GetCarryingCapacity(syncedPlayerClass.Value);
+        public int CarriedOre => carriedOre.Value;
+        public int CarriedCoreShards => carriedCoreShards.Value;
+        public int PlayerNumber => (int)(OwnerClientId % (ulong)CoreSessionManager.PlayerLimit) + 1;
+        public int PlayerLevel => playerLevel.Value;
+        public float CurrentHealth => currentHealth.Value;
+        public float MaximumHealth => maximumHealth.Value;
+        public string Nickname => nickname.Value.ToString();
+        public float NormalizedSpeed => normalizedSpeed;
+        public int ActionVariant => actionVariant.Value;
+        public CorePlayerClass PlayerClass => syncedPlayerClass.Value;
+        public float InteractionRange => interactionRange;
+        public bool IsDowned => downed.Value;
+        public int ReviveProgress => Mathf.RoundToInt(ResurrectionProgress * 100f);
+        public bool IsBeingResurrected => resurrectorId.Value != NoResurrector;
+        public float ResurrectionProgress
+        {
+            get
+            {
+                if (!IsBeingResurrected || NetworkManager == null) return 0f;
+                var duration = resurrectionEndsAt.Value - resurrectionStartedAt.Value;
+                return duration <= 0d ? 0f : Mathf.Clamp01((float)((NetworkManager.ServerTime.Time -
+                    resurrectionStartedAt.Value) / duration));
+            }
+        }
+        public float ActionProgress
+        {
+            get
+            {
+                var duration = actionEndsAt.Value - actionStartedAt.Value;
+                return duration <= 0d || NetworkManager == null ? 1f :
+                    Mathf.Clamp01((float)((NetworkManager.ServerTime.Time - actionStartedAt.Value) / duration));
+            }
+        }
+
+        private void Awake()
+        {
+            agent = GetComponent<NavMeshAgent>();
+            agent.speed = movementSpeed;
+            agent.acceleration = acceleration;
+            agent.angularSpeed = rotationSpeed;
+            agent.stoppingDistance = 0.08f;
+            agent.autoBraking = true;
+            previousPosition = transform.position;
+        }
+
+        public override void OnNetworkSpawn()
+        {
+            agent.enabled = IsOwner;
+            if (IsServer)
+            {
+                syncedPlayerClass.Value = playerClass;
+                playerLevel.Value = startingLevel;
+                maximumHealth.Value = configuredMaximumHealth;
+                currentHealth.Value = maximumHealth.Value;
+                if (!preserveSpawnTransform)
+                {
+                    var slot = (int)(OwnerClientId % CoreSessionManager.PlayerLimit);
+                    var offsets = new[] { new Vector3(-1.5f, 0f, -1.5f), new Vector3(1.5f, 0f, -1.5f),
+                        new Vector3(-1.5f, 0f, 1.5f), new Vector3(1.5f, 0f, 1.5f) };
+                    transform.position = offsets[slot];
+                }
+            }
+            if (IsOwner)
+            {
+                Local = this;
+                SetNicknameRpc(string.IsNullOrWhiteSpace(CoreSettings.Nickname) ? "Player" : CoreSettings.Nickname);
+            }
+            AttachPlayerMarker();
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            if (IsServer) CancelResurrectionChannel();
+            if (Local == this) Local = null;
+        }
+
+        private void Update()
+        {
+            var delta = transform.position - previousPosition;
+            delta.y = 0f;
+            var measuredSpeed = delta.magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
+            if (IsOwner && agent != null && agent.enabled && agent.isOnNavMesh)
+                measuredSpeed = agent.velocity.magnitude;
+            var targetSpeed = Mathf.Clamp01(measuredSpeed / movementSpeed);
+            var smoothingRate = targetSpeed > normalizedSpeed ? 9f : 12f;
+            normalizedSpeed = Mathf.MoveTowards(normalizedSpeed, targetSpeed, smoothingRate * Time.deltaTime);
+            previousPosition = transform.position;
+            if (IsServer)
+                UpdateResurrectionChannel();
+            if (IsServer && action.Value != WarriorAction.None && NetworkManager.ServerTime.Time >= actionEndsAt.Value)
+                action.Value = WarriorAction.None;
+            if (!IsOwner || SceneManager.GetActiveScene().name != CoreSessionManager.DebugSceneName)
+                return;
+            if (Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame &&
+                lastDebugClassSwitchFrame != Time.frameCount)
+            {
+                lastDebugClassSwitchFrame = Time.frameCount;
+                CycleDebugClassRpc();
+                return;
+            }
+            if (downed.Value)
+            {
+                if (agent != null && agent.enabled && agent.isOnNavMesh) agent.ResetPath();
+                return;
+            }
+            if (Keyboard.current != null && Keyboard.current.kKey.wasPressedThisFrame)
+                SetDebugDownedRpc(true);
+            if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+                TryStartResurrection(FindNearestDownedHero(interactionRange));
+            HandleLeftPointer();
+            UpdateContextInteraction();
+        }
+
+        private void HandleLeftPointer()
+        {
+            var mouse = Mouse.current;
+            if (mouse == null || !mouse.leftButton.isPressed ||
+                (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
+                (CoreRadialMenu.Instance != null && CoreRadialMenu.Instance.IsOpen)) return;
+            if (!mouse.leftButton.wasPressedThisFrame && Time.unscaledTime < nextHeldCommandAt) return;
+            nextHeldCommandAt = Time.unscaledTime + heldCommandInterval;
+            var camera = Camera.main;
+            if (camera == null || !Physics.Raycast(camera.ScreenPointToRay(mouse.position.ReadValue()), out var hit, 500f)) return;
+
+            var player = hit.collider.GetComponentInParent<NetworkWarrior>();
+            if (player != null && player != this && player.IsDowned) { BeginInteraction(player.NetworkObject, ContextInteraction.RevivePlayer); return; }
+            if (player == this) return;
+            var enemy = hit.collider.GetComponentInParent<EnemyBrain>();
+            if (enemy != null) { BeginInteraction(enemy.NetworkObject, ContextInteraction.AttackEnemy); return; }
+            var dummy = hit.collider.GetComponentInParent<CoreDebugDummy>();
+            if (dummy != null) { BeginInteraction(dummy.NetworkObject, ContextInteraction.AttackEnemy); return; }
+            var resource = hit.collider.GetComponentInParent<CoreDebugResourceNode>();
+            if (resource != null) { BeginInteraction(resource.NetworkObject, ContextInteraction.MineResource); return; }
+            var building = hit.collider.GetComponentInParent<CoreBuilding>();
+            if (building != null && (building.State == CoreBuildingState.UnderConstruction || building.State == CoreBuildingState.Damaged))
+            { BeginInteraction(building.NetworkObject, ContextInteraction.BuildOrRepair); return; }
+            var core = hit.collider.GetComponentInParent<CoreDebugDeposit>();
+            if (core != null) { BeginInteraction(core.NetworkObject, ContextInteraction.DepositResources); return; }
+            SetGroundDestination(hit.point);
+        }
+
+        private void SetGroundDestination(Vector3 requested)
+        {
+            if (!NavMesh.SamplePosition(requested, out var hit, groundSampleRadius, NavMesh.AllAreas)) return;
+            if (interaction == ContextInteraction.None && hasGroundDestination &&
+                (lastGroundDestination - hit.position).sqrMagnitude < groundRetargetDistance * groundRetargetDistance) return;
+            ClearInteraction();
+            EnsureAgentOnNavMesh(hit.position);
+            agent.stoppingDistance = 0.08f;
+            agent.SetDestination(hit.position);
+            lastGroundDestination = hit.position;
+            hasGroundDestination = true;
+        }
+
+        private void BeginInteraction(NetworkObject target, ContextInteraction requested)
+        {
+            if (target != null && interactionTarget == target && interaction == requested) return;
+            interactionTarget = target;
+            interaction = requested;
+            nextInteractionAt = 0d;
+            hasGroundDestination = false;
+            if (target == null) return;
+            EnsureAgentOnNavMesh(transform.position);
+            agent.stoppingDistance = GetRange(requested) * 0.9f;
+            agent.SetDestination(target.transform.position);
+        }
+
+        private void UpdateContextInteraction()
+        {
+            if (interaction == ContextInteraction.None || interactionTarget == null || !interactionTarget.IsSpawned)
+            { if (interaction != ContextInteraction.None) ClearInteraction(); return; }
+            if (!ShouldContinue()) { ClearInteraction(); return; }
+            var targetPosition = interactionTarget.transform.position;
+            agent.SetDestination(targetPosition);
+            var offset = targetPosition - transform.position;
+            offset.y = 0f;
+            if (offset.magnitude > GetRange(interaction)) return;
+            agent.ResetPath();
+            if (offset.sqrMagnitude > 0.02f)
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset.normalized), rotationSpeed * Time.deltaTime);
+            if (interaction == ContextInteraction.RevivePlayer)
+            {
+                RequestStartResurrectionRpc(new NetworkObjectReference(interactionTarget));
+                ClearInteraction();
+                return;
+            }
+            var now = NetworkManager.ServerTime.Time;
+            if (now < nextInteractionAt) return;
+            nextInteractionAt = now + GetCooldown(interaction);
+            PerformContextInteractionRpc(new NetworkObjectReference(interactionTarget), interaction);
+            if (interaction == ContextInteraction.DepositResources) ClearInteraction();
+        }
+
+        private bool ShouldContinue() => interaction switch
+        {
+            ContextInteraction.AttackEnemy => IsLivingEnemy(interactionTarget),
+            ContextInteraction.MineResource => CarriedResources < CarryingCapacity &&
+                interactionTarget.GetComponent<CoreDebugResourceNode>()?.Resources > 0,
+            ContextInteraction.BuildOrRepair => NeedsWork(interactionTarget.GetComponent<CoreBuilding>()),
+            ContextInteraction.RevivePlayer => interactionTarget.GetComponent<NetworkWarrior>()?.IsDowned == true,
+            ContextInteraction.DepositResources => CarriedResources > 0,
+            _ => false
+        };
+
+        private static bool NeedsWork(CoreBuilding building) => building != null &&
+            (building.State == CoreBuildingState.UnderConstruction || building.Health < building.MaximumHealth);
+        private static bool IsLivingEnemy(NetworkObject target)
+        {
+            var enemy = target != null ? target.GetComponent<EnemyBrain>() : null;
+            if (enemy != null) return enemy.IsAlive;
+            return target != null && target.GetComponent<CoreDebugDummy>()?.Health > 0f;
+        }
+        private float GetRange(ContextInteraction type) => type switch
+        {
+            ContextInteraction.AttackEnemy => attackRange,
+            ContextInteraction.MineResource => mineRange,
+            ContextInteraction.BuildOrRepair => buildRange,
+            _ => interactionRange
+        };
+        private float GetCooldown(ContextInteraction type) => type switch
+        { ContextInteraction.AttackEnemy => attackCooldown, ContextInteraction.MineResource => mineDuration,
+            ContextInteraction.BuildOrRepair => buildDuration, _ => depositDuration };
+
+        private void ClearInteraction()
+        {
+            interaction = ContextInteraction.None;
+            interactionTarget = null;
+            if (agent != null && agent.enabled && agent.isOnNavMesh) { agent.ResetPath(); agent.stoppingDistance = 0.08f; }
+        }
+
+        private void EnsureAgentOnNavMesh(Vector3 position)
+        {
+            if (agent.isOnNavMesh) return;
+            if (NavMesh.SamplePosition(position, out var hit, 5f, NavMesh.AllAreas)) agent.Warp(hit.position);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void SetNicknameRpc(string value)
+        {
+            var clean = string.IsNullOrWhiteSpace(value) ? "Player" : value.Trim();
+            nickname.Value = new FixedString64Bytes(clean.Substring(0, Mathf.Min(24, clean.Length)));
+        }
+
+        [Rpc(SendTo.Server)]
+        private void PerformContextInteractionRpc(NetworkObjectReference reference, ContextInteraction requested)
+        {
+            if (downed.Value || !reference.TryGet(out var target)) return;
+            var offset = target.transform.position - transform.position; offset.y = 0f;
+            var range = GetRange(requested);
+            if (offset.magnitude > range + 0.35f) return;
+            switch (requested)
+            {
+                case ContextInteraction.AttackEnemy:
+                    if (Vector3.Angle(transform.forward, offset) > attackArc * 0.5f) return;
+                    var enemy = target.GetComponent<EnemyBrain>();
+                    var dummy = target.GetComponent<CoreDebugDummy>();
+                    if (enemy == null && dummy == null) return;
+                    BeginServerAction(WarriorAction.Attack, attackDuration);
+                    if (enemy != null) enemy.TakeDamage(damage, this); else dummy.TakeDamage(damage);
+                    break;
+                case ContextInteraction.MineResource:
+                    var node = target.GetComponent<CoreDebugResourceNode>(); if (node == null) return;
+                    if (CarriedResources >= CarryingCapacity) return;
+                    BeginServerAction(WarriorAction.Mine, mineDuration);
+                    var mined = node.TryMine(OwnerClientId, syncedPlayerClass.Value == CorePlayerClass.Builder,
+                        new NetworkObjectReference(NetworkObject));
+                    if (mined > 0)
+                    {
+                        if (node.ResourceKind == MinedResourceKind.Ore)
+                            carriedOre.Value += mined;
+                        else
+                            carriedCoreShards.Value += mined;
+                    }
+                    break;
+                case ContextInteraction.BuildOrRepair:
+                    var building = target.GetComponent<CoreBuilding>(); if (building == null) return;
+                    BeginServerAction(WarriorAction.Build, buildDuration); building.BuildOrRepair(constructionPower); break;
+                case ContextInteraction.DepositResources:
+                    var core = target.GetComponent<CoreDebugDeposit>(); if (core == null || CarriedResources <= 0) return;
+                    BeginServerAction(WarriorAction.Deposit, depositDuration);
+                    core.Deposit(carriedOre.Value, carriedCoreShards.Value);
+                    carriedOre.Value = 0;
+                    carriedCoreShards.Value = 0;
+                    break;
+            }
+        }
+
+        private void BeginServerAction(WarriorAction requested, float duration)
+        {
+            var now = NetworkManager.ServerTime.Time;
+            if (requested == WarriorAction.Attack)
+            {
+                actionVariant.Value = nextAttackVariant;
+                nextAttackVariant = (byte)((nextAttackVariant + 1) % 3);
+            }
+            else
+            {
+                actionVariant.Value = 0;
+            }
+            action.Value = requested; actionStartedAt.Value = now; actionEndsAt.Value = now + duration;
+        }
+
+        public NetworkWarrior FindNearestDownedHero(float range)
+        {
+            NetworkWarrior closest = null;
+            var closestSqr = range * range;
+            foreach (var hero in FindObjectsByType<NetworkWarrior>())
+            {
+                if (hero == this || !hero.IsSpawned || !hero.IsDowned || hero.IsBeingResurrected) continue;
+                var sqr = (hero.transform.position - transform.position).sqrMagnitude;
+                if (sqr <= closestSqr) { closestSqr = sqr; closest = hero; }
+            }
+            return closest;
+        }
+
+        public void TryStartResurrection(NetworkWarrior target)
+        {
+            if (!IsOwner || downed.Value || target == null || !target.IsDowned ||
+                Vector3.Distance(transform.position, target.transform.position) > interactionRange)
+                return;
+            RequestStartResurrectionRpc(new NetworkObjectReference(target.NetworkObject));
+        }
+
+        [Rpc(SendTo.Server)]
+        private void RequestStartResurrectionRpc(NetworkObjectReference reference)
+        {
+            if (downed.Value || resurrectionTarget != null || !reference.TryGet(out var targetObject)) return;
+            var target = targetObject.GetComponent<NetworkWarrior>();
+            if (target == null || target == this || !target.downed.Value || target.resurrectorId.Value != NoResurrector ||
+                Vector3.Distance(transform.position, target.transform.position) > interactionRange + 0.35f) return;
+
+            var duration = syncedPlayerClass.Value == CorePlayerClass.Healer
+                ? healerResurrectionDuration
+                : resurrectionDuration;
+            var now = NetworkManager.ServerTime.Time;
+            resurrectionTarget = target;
+            resurrectionStartPosition = transform.position;
+            resurrectionDamageRevision = damageRevision;
+            target.resurrectorId.Value = NetworkObjectId;
+            target.resurrectionStartedAt.Value = now;
+            target.resurrectionEndsAt.Value = now + duration;
+            target.reviveProgress.Value = 0;
+            BeginServerAction(WarriorAction.Revive, duration);
+        }
+
+        private void UpdateResurrectionChannel()
+        {
+            if (resurrectionTarget == null) return;
+            var now = NetworkManager.ServerTime.Time;
+            var moved = (transform.position - resurrectionStartPosition).sqrMagnitude >
+                        resurrectionMoveTolerance * resurrectionMoveTolerance;
+            if (downed.Value || moved || damageRevision != resurrectionDamageRevision ||
+                !resurrectionTarget.IsSpawned || !resurrectionTarget.downed.Value ||
+                Vector3.Distance(transform.position, resurrectionTarget.transform.position) > interactionRange + 0.5f)
+            {
+                CancelResurrectionChannel();
+                return;
+            }
+
+            resurrectionTarget.reviveProgress.Value = Mathf.RoundToInt(resurrectionTarget.ResurrectionProgress * 100f);
+            if (now < resurrectionTarget.resurrectionEndsAt.Value) return;
+            resurrectionTarget.CompleteResurrection(syncedPlayerClass.Value == CorePlayerClass.Healer);
+            resurrectionTarget = null;
+            if (action.Value == WarriorAction.Revive) action.Value = WarriorAction.None;
+        }
+
+        private void CancelResurrectionChannel()
+        {
+            if (resurrectionTarget != null && resurrectionTarget.resurrectorId.Value == NetworkObjectId)
+                resurrectionTarget.ClearResurrectionState();
+            resurrectionTarget = null;
+            if (action.Value == WarriorAction.Revive) action.Value = WarriorAction.None;
+        }
+
+        private void ClearResurrectionState()
+        {
+            resurrectorId.Value = NoResurrector;
+            resurrectionStartedAt.Value = 0d;
+            resurrectionEndsAt.Value = 0d;
+            reviveProgress.Value = 0;
+        }
+
+        private void CompleteResurrection(bool resurrectedByHealer)
+        {
+            downed.Value = false;
+            currentHealth.Value = maximumHealth.Value * (resurrectedByHealer ? 1f : revivedHealthFraction);
+            ClearResurrectionState();
+        }
+
+        public void TakeDamage(float amount)
+        {
+            if (!IsServer || downed.Value || amount <= 0f) return;
+            damageRevision++;
+            CancelResurrectionChannel();
+            currentHealth.Value = Mathf.Max(0f, currentHealth.Value - amount);
+            if (currentHealth.Value <= 0f)
+                EnterDownedState();
+        }
+
+        private void EnterDownedState()
+        {
+            if (downed.Value) return;
+            downed.Value = true;
+            currentHealth.Value = 0f;
+            reviveProgress.Value = 0;
+            action.Value = WarriorAction.None;
+            CancelResurrectionChannel();
+            DropCarriedLoot();
+            ClearInteraction();
+        }
+
+        private void DropCarriedLoot()
+        {
+            var ore = carriedOre.Value;
+            var shards = carriedCoreShards.Value;
+            carriedOre.Value = 0;
+            carriedCoreShards.Value = 0;
+            if (ore > 0) CoreLootPickup.Spawn(MinedResourceKind.Ore, ore, transform.position + transform.right * 0.45f);
+            if (shards > 0) CoreLootPickup.Spawn(MinedResourceKind.CoreShards, shards, transform.position - transform.right * 0.45f);
+        }
+
+        public int TryCollectLoot(MinedResourceKind kind, int requestedAmount)
+        {
+            if (!IsServer || downed.Value || requestedAmount <= 0) return 0;
+            var accepted = Mathf.Min(requestedAmount, CarryingCapacity - CarriedResources);
+            if (accepted <= 0) return 0;
+            if (kind == MinedResourceKind.Ore) carriedOre.Value += accepted;
+            else carriedCoreShards.Value += accepted;
+            return accepted;
+        }
+
+        [Rpc(SendTo.Server)]
+        private void SetDebugDownedRpc(bool value)
+        {
+            if (value) EnterDownedState();
+            else
+            {
+                downed.Value = false;
+                currentHealth.Value = maximumHealth.Value;
+                ClearResurrectionState();
+            }
+        }
+
+        [Rpc(SendTo.Server)]
+        private void CycleDebugClassRpc()
+        {
+            if (SceneManager.GetActiveScene().name != CoreSessionManager.DebugSceneName)
+                return;
+
+            var nextClass = (CorePlayerClass)(((int)syncedPlayerClass.Value + 1) % 4);
+            var nextCapacity = GetCarryingCapacity(nextClass);
+            if (CarriedResources > nextCapacity)
+            {
+                Debug.LogWarning($"Cannot switch to {nextClass} while carrying {CarriedResources}/{nextCapacity} resources.", this);
+                return;
+            }
+            var prefab = Resources.Load<GameObject>(GetClassPrefabPath(nextClass));
+            if (prefab == null)
+            {
+                Debug.LogError($"Cannot switch to {nextClass}: its player prefab is missing from Resources.", this);
+                return;
+            }
+
+            var previousNetworkObject = NetworkObject;
+            var previousOwner = OwnerClientId;
+            var replacementObject = Instantiate(prefab, transform.position, transform.rotation);
+            var replacement = replacementObject.GetComponent<NetworkWarrior>();
+            var replacementNetworkObject = replacementObject.GetComponent<NetworkObject>();
+            if (replacement == null || replacementNetworkObject == null)
+            {
+                Destroy(replacementObject);
+                Debug.LogError($"Cannot switch to {nextClass}: prefab requires NetworkWarrior and NetworkObject.", this);
+                return;
+            }
+
+            replacement.PrepareClassReplacement(nextClass);
+            replacementNetworkObject.SpawnAsPlayerObject(previousOwner, true);
+            replacement.RestoreClassReplacementState(nickname.Value, carriedOre.Value, carriedCoreShards.Value,
+                playerLevel.Value, currentHealth.Value, maximumHealth.Value, downed.Value, reviveProgress.Value);
+            previousNetworkObject.Despawn(true);
+        }
+
+        private void PrepareClassReplacement(CorePlayerClass replacementClass)
+        {
+            playerClass = replacementClass;
+            preserveSpawnTransform = true;
+        }
+
+        private void RestoreClassReplacementState(FixedString64Bytes previousNickname, int ore, int coreShards,
+            int previousLevel, float previousHealth, float previousMaximumHealth, bool wasDowned,
+            int previousReviveProgress)
+        {
+            nickname.Value = previousNickname;
+            carriedOre.Value = ore;
+            carriedCoreShards.Value = coreShards;
+            playerLevel.Value = previousLevel;
+            currentHealth.Value = previousHealth;
+            maximumHealth.Value = previousMaximumHealth;
+            downed.Value = wasDowned;
+            reviveProgress.Value = previousReviveProgress;
+        }
+
+        private static int GetCarryingCapacity(CorePlayerClass requestedClass) =>
+            requestedClass == CorePlayerClass.Builder ? BuilderCarryingCapacity : DefaultCarryingCapacity;
+
+        private static string GetClassPrefabPath(CorePlayerClass requestedClass) => requestedClass switch
+        {
+            CorePlayerClass.Mage => "CoreMage",
+            CorePlayerClass.Builder => "CoreBuilder",
+            CorePlayerClass.Healer => "CoreHealer",
+            _ => "CoreWarrior"
+        };
+
+        private void AttachPlayerMarker()
+        {
+            if (playerMarker != null) return;
+            var markerPrefab = Resources.Load<GameObject>($"PlayerMarkers/P{PlayerNumber}");
+            if (markerPrefab == null)
+            {
+                Debug.LogWarning($"Player marker P{PlayerNumber} is missing from Resources/PlayerMarkers.", this);
+                return;
+            }
+            playerMarker = Instantiate(markerPrefab, transform);
+            playerMarker.name = $"P{PlayerNumber} Marker";
+            playerMarker.transform.localPosition = Vector3.up * 0.025f;
+            foreach (var markerCollider in playerMarker.GetComponentsInChildren<Collider>())
+                markerCollider.enabled = false;
+        }
+
+        public void RequestPlaceBuilding(CoreBuildingType type, Vector3 position) { if (IsOwner) PlaceBuildingRpc(type, position); }
+        [Rpc(SendTo.Server)]
+        private void PlaceBuildingRpc(CoreBuildingType type, Vector3 requestedPosition)
+        {
+            if (!CoreBuilding.CanPlace(requestedPosition, out var validPosition)) return;
+            var core = FindFirstObjectByType<CoreDebugDeposit>();
+            if (core == null || !core.TrySpend(CoreBuildingCatalog.BuildCurrency(type),
+                    CoreBuildingCatalog.Cost(type))) return;
+            var prefab = Resources.Load<GameObject>(CoreBuildingCatalog.ResourcePath(type));
+            if (prefab == null) return;
+            var instance = Instantiate(prefab, validPosition, Quaternion.identity);
+            var networkObject = instance.GetComponent<NetworkObject>(); networkObject.Spawn(true);
+            BeginPlacedBuildingRpc(new NetworkObjectReference(networkObject));
+        }
+        [Rpc(SendTo.Owner)] private void BeginPlacedBuildingRpc(NetworkObjectReference reference)
+        { if (reference.TryGet(out var target)) BeginInteraction(target, ContextInteraction.BuildOrRepair); }
+
+        public void RequestBuildingUpgrade(CoreBuilding building, byte branch)
+        { if (IsOwner && building != null) UpgradeBuildingRpc(new NetworkObjectReference(building.NetworkObject), branch); }
+        [Rpc(SendTo.Server)]
+        private void UpgradeBuildingRpc(NetworkObjectReference reference, byte branch)
+        {
+            if (!reference.TryGet(out var target) || Vector3.Distance(transform.position, target.transform.position) > 5f) return;
+            var building = target.GetComponent<CoreBuilding>(); var core = FindFirstObjectByType<CoreDebugDeposit>();
+            if (building == null || core == null || !building.CanUpgrade) return;
+            if (core.TrySpend(CoreBuildingCatalog.UpgradeCurrency(building.BuildingType),
+                    CoreBuildingCatalog.UpgradeCost(building.BuildingType, building.Level))) building.TryUpgrade(branch);
+        }
+
+        public void RequestCoreUpgrade(CoreDebugDeposit core, byte branch)
+        { if (IsOwner && core != null) UpgradeCoreRpc(new NetworkObjectReference(core.NetworkObject), branch); }
+        [Rpc(SendTo.Server)]
+        private void UpgradeCoreRpc(NetworkObjectReference reference, byte branch)
+        {
+            if (!reference.TryGet(out var target) || Vector3.Distance(transform.position, target.transform.position) > 5f) return;
+            target.GetComponent<CoreDebugDeposit>()?.TryUpgrade(branch);
+        }
+    }
+}
