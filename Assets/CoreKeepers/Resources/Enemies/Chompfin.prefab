@@ -352,6 +352,8 @@ MonoBehaviour:
   heroAggroDuration: 10
   tauntDuration: 15
   deathAnimationDuration: 1.1
+  coreShardsDropMin: 0
+  coreShardsDropMax: 0
   resistant_Freeze: 0
   resistant_Stun: 0
   resistant_Chill: 0
@@ -380,4 +382,15 @@ MonoBehaviour:
   walkFrequency: 7
   walkBobHeight: 0.12
   handTravel: 0.2
-  attackAngle: 135
+  attackAngle: 165
+  windupAngle: 105
+  windupDistance: 0.28
+  strikeReach: 0.52
+  swooshArc: 220
+  swooshRadius: 0.7
+  swooshLift: 0.16
+  trailColor: {r: 0.25, g: 0.8, b: 1, a: 1}
+  trailEmissionIntensity: 4
+  trailWidth: 0.22
+  trailLifetime: 0.22
+  trailHandOffset: {x: 0, y: 0, z: 0.38}

@@ -25,6 +25,7 @@ namespace CoreKeepers
                 var systems = new GameObject("Direct Debug Network");
                 var transport = systems.AddComponent<UnityTransport>();
                 manager = systems.AddComponent<NetworkManager>();
+                manager.NetworkConfig ??= new NetworkConfig();
                 manager.NetworkConfig.NetworkTransport = transport;
             }
 

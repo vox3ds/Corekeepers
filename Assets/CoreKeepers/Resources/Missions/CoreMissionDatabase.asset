@@ -1,0 +1,277 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 303e98afb2039404d80d5296b579c916, type: 3}
+  m_Name: CoreMissionDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.CoreMissionWaveDatabase
+  missions:
+  - displayName: Mission 1
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 15
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 20
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 5
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 10
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 15
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 3
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 2
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 3
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 4
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 5
+    hasBoss: 1
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 6
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 7
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 8
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 9
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 10
+    hasBoss: 1
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 11
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 12
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 13
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 14
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 15
+    hasBoss: 1
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 16
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 17
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 18
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 19
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 20
+    hasBoss: 1
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 21
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 22
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 23
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 24
+    hasBoss: 0
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+  - displayName: Mission 25
+    hasBoss: 1
+    waves:
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []
+    - enemies: []

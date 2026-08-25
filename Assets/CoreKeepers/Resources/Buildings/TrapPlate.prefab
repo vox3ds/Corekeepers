@@ -1094,8 +1094,6 @@ MonoBehaviour:
   foundationVisual: {fileID: 3448963339811158051}
   completedVisual: {fileID: 4403995481349580047}
   maximumLevel: 3
-  constructionBarOffset: {x: 0, y: 2.25, z: 0}
-  constructionBarColor: {r: 1, g: 0.68, b: 0.08, a: 1}
 --- !u!114 &743591545915099382
 MonoBehaviour:
   m_ObjectHideFlags: 0
