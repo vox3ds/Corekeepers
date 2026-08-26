@@ -313,13 +313,27 @@ MonoBehaviour:
   handTravel: 0.2
   attackAngle: 165
   windupAngle: 105
-  windupDistance: 0.28
   strikeReach: 0.52
   swooshArc: 220
   swooshRadius: 0.7
   swooshLift: 0.16
+  smashWindupAngle: 105
+  smashStrikeAngle: 165
+  smashWindupDistance: 0.28
+  smashStrikeReach: 0.42
+  smashStrikeDrop: 0.24
+  smashHandTilt: 18
+  smashHeadDrop: 0.16
+  smashHeadReach: 0.14
+  headWindupDistance: 0.3
+  headWindupLift: 0.12
+  headWindupAngle: -24
+  headStrikeReach: 0.95
+  headStrikeDrop: 0.08
+  headStrikeAngle: 34
   trailColor: {r: 0.25, g: 0.8, b: 1, a: 1}
   trailEmissionIntensity: 4
   trailWidth: 0.22
   trailLifetime: 0.22
   trailHandOffset: {x: 0, y: 0, z: 0.38}
+  trailHeadOffset: {x: 0, y: 0, z: 0.45}
