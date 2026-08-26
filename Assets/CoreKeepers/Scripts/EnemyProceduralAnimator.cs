@@ -1,27 +1,77 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace CoreKeepers
 {
+    public enum EnemyAttackAnimationPreset
+    {
+        AlternatingMelee,
+        TwoHandedSmash,
+        ThrowRock,
+        BowShot,
+        AlternatingMagicProjectile,
+        RaisedHandInstantSpell,
+        None,
+        HeadAttack
+    }
+
+    public enum EnemyMovementAnimationPreset
+    {
+        Walk,
+        Run,
+        Floating,
+        PhysicsRoll
+    }
+
     [RequireComponent(typeof(EnemyBrain))]
     public sealed class EnemyProceduralAnimator : MonoBehaviour
     {
+        [Header("Animation Presets")]
+        [SerializeField] private EnemyAttackAnimationPreset attackPreset = EnemyAttackAnimationPreset.AlternatingMelee;
+        [SerializeField] private EnemyMovementAnimationPreset movementPreset = EnemyMovementAnimationPreset.Walk;
+
+        [Header("Magic Projectile")]
+        [SerializeField] private GameObject projectilePrefab;
+        [SerializeField, Range(0.35f, 0.75f)] private float projectileReleaseTime = 0.55f;
+
+        [Header("Movement")]
         [SerializeField] private float walkFrequency = 7f;
         [SerializeField] private float walkBobHeight = 0.12f;
         [SerializeField] private float handTravel = 0.2f;
-        [Header("Attack Swing")]
+        [Header("Alternating Melee")]
         [SerializeField] private float attackAngle = 165f;
         [SerializeField] private float windupAngle = 105f;
-        [SerializeField] private float windupDistance = 0.28f;
         [SerializeField] private float strikeReach = 0.52f;
         [SerializeField, Range(180f, 300f)] private float swooshArc = 220f;
         [SerializeField, Min(0.1f)] private float swooshRadius = 0.7f;
         [SerializeField, Min(0f)] private float swooshLift = 0.16f;
-        [Header("Attack Hand Trails")]
+
+        [Header("Two Handed Smash")]
+        [SerializeField] private float smashWindupAngle = 105f;
+        [SerializeField] private float smashStrikeAngle = 165f;
+        [FormerlySerializedAs("windupDistance")]
+        [SerializeField, Min(0f)] private float smashWindupDistance = 0.28f;
+        [SerializeField, Min(0f)] private float smashStrikeReach = 0.42f;
+        [SerializeField, Min(0f)] private float smashStrikeDrop = 0.24f;
+        [SerializeField] private float smashHandTilt = 18f;
+        [SerializeField, Min(0f)] private float smashHeadDrop = 0.16f;
+        [SerializeField, Min(0f)] private float smashHeadReach = 0.14f;
+
+        [Header("Head Attack")]
+        [SerializeField, Min(0f)] private float headWindupDistance = 0.3f;
+        [SerializeField] private float headWindupLift = 0.12f;
+        [SerializeField] private float headWindupAngle = -24f;
+        [SerializeField, Min(0f)] private float headStrikeReach = 0.95f;
+        [SerializeField] private float headStrikeDrop = 0.08f;
+        [SerializeField] private float headStrikeAngle = 34f;
+
+        [Header("Attack Trails")]
         [SerializeField, ColorUsage(true, true)] private Color trailColor = new(0.25f, 0.8f, 1f, 1f);
         [SerializeField, Min(0.1f)] private float trailEmissionIntensity = 4f;
         [SerializeField, Min(0.01f)] private float trailWidth = 0.22f;
         [SerializeField, Min(0.02f)] private float trailLifetime = 0.22f;
         [SerializeField] private Vector3 trailHandOffset = new(0f, 0f, 0.38f);
+        [SerializeField] private Vector3 trailHeadOffset = new(0f, 0f, 0.45f);
 
         private EnemyBrain enemy;
         private Transform head;
@@ -40,9 +90,48 @@ namespace CoreKeepers
         private GameObject stunStars;
         private TrailRenderer leftHandTrail;
         private TrailRenderer rightHandTrail;
+        private TrailRenderer headTrail;
         private Material trailMaterial;
+        private GameObject heldRock;
         private float phase;
         private bool ready;
+
+        public EnemyAttackAnimationPreset AttackPreset => attackPreset;
+        public EnemyMovementAnimationPreset MovementPreset => movementPreset;
+        public GameObject ProjectilePrefab => projectilePrefab;
+        public float ProjectileReleaseTime => projectileReleaseTime;
+        public bool UsesPhysicsRolling => movementPreset == EnemyMovementAnimationPreset.PhysicsRoll;
+
+        public EnemyAnimationState GetNextAttackState(ref bool useRightSide)
+        {
+            switch (attackPreset)
+            {
+                case EnemyAttackAnimationPreset.AlternatingMelee:
+                    var melee = useRightSide ? EnemyAnimationState.Attack_RHand : EnemyAnimationState.Attack_LHand;
+                    useRightSide = !useRightSide;
+                    return melee;
+                case EnemyAttackAnimationPreset.TwoHandedSmash: return EnemyAnimationState.Smash;
+                case EnemyAttackAnimationPreset.ThrowRock: return EnemyAnimationState.ThrowRock;
+                case EnemyAttackAnimationPreset.BowShot: return EnemyAnimationState.BowShot;
+                case EnemyAttackAnimationPreset.AlternatingMagicProjectile:
+                    var magic = useRightSide
+                        ? EnemyAnimationState.CastProjectile_RHand
+                        : EnemyAnimationState.CastProjectile_LHand;
+                    useRightSide = !useRightSide;
+                    return magic;
+                case EnemyAttackAnimationPreset.RaisedHandInstantSpell: return EnemyAnimationState.CastBuff;
+                case EnemyAttackAnimationPreset.HeadAttack: return EnemyAnimationState.HeadAttack;
+                default: return EnemyAnimationState.Idle;
+            }
+        }
+
+        public Vector3 GetProjectileOrigin(bool rightSide)
+        {
+            var hand = rightSide ? rightHand : leftHand;
+            return hand != null
+                ? hand.position
+                : transform.position + Vector3.up + transform.forward * 0.65f;
+        }
 
         private void Awake()
         {
@@ -76,6 +165,7 @@ namespace CoreKeepers
             leftRotation = leftHand.localRotation;
             rightRotation = rightHand.localRotation;
             CreateAttackTrails();
+            CreateHeldRock();
             CreateStatusVisuals();
             ready = true;
         }
@@ -84,7 +174,8 @@ namespace CoreKeepers
         {
             if (!ready) return;
             ResetPose();
-            SetTrailEmission(false, false);
+            SetTrailEmission(false, false, false);
+            if (heldRock != null) heldRock.SetActive(false);
             phase += Time.deltaTime * walkFrequency;
             AnimateState();
             UpdateStatusVisuals();
@@ -98,7 +189,7 @@ namespace CoreKeepers
                 state = EnemyAnimationState.Walk;
             switch (state)
             {
-                case EnemyAnimationState.Walk: AnimateWalk(); break;
+                case EnemyAnimationState.Walk: AnimateMovement(); break;
                 case EnemyAnimationState.Attack_LHand:
                     AnimateHand(leftHand, leftRotation, t, -1f);
                     SetTrailEmission(IsTrailPhase(t), false);
@@ -110,10 +201,12 @@ namespace CoreKeepers
                 case EnemyAnimationState.Smash: AnimateSmash(t); break;
                 case EnemyAnimationState.ThrowRock:
                     AnimateThrow(t);
-                    SetTrailEmission(false, IsTrailPhase(t));
                     break;
-                case EnemyAnimationState.CastProjectile: AnimateCast(t, false); break;
-                case EnemyAnimationState.CastBuff: AnimateCast(t, true); break;
+                case EnemyAnimationState.BowShot: AnimateBowShot(t); break;
+                case EnemyAnimationState.CastProjectile_LHand: AnimateProjectileCast(t, false); break;
+                case EnemyAnimationState.CastProjectile_RHand: AnimateProjectileCast(t, true); break;
+                case EnemyAnimationState.CastBuff: AnimateInstantSpell(t); break;
+                case EnemyAnimationState.HeadAttack: AnimateHeadAttack(t); break;
                 case EnemyAnimationState.TakeHit: head.localRotation = headRotation * Quaternion.Euler(-18f * Mathf.Sin(t * Mathf.PI), 0f, 12f); break;
                 case EnemyAnimationState.Freeze: break;
                 case EnemyAnimationState.Burn: head.localPosition += Vector3.up * Mathf.Abs(Mathf.Sin(Time.time * 18f)) * 0.08f; break;
@@ -125,12 +218,29 @@ namespace CoreKeepers
             }
         }
 
-        private void AnimateWalk()
+        private void AnimateMovement()
         {
             var wave = Mathf.Sin(phase);
-            head.localPosition += Vector3.up * Mathf.Abs(wave) * walkBobHeight * enemy.NormalizedSpeed;
-            leftHand.localPosition += new Vector3(0f, wave * handTravel * 0.4f, wave * handTravel);
-            rightHand.localPosition += new Vector3(0f, -wave * handTravel * 0.4f, -wave * handTravel);
+            var speed = enemy.NormalizedSpeed;
+            switch (movementPreset)
+            {
+                case EnemyMovementAnimationPreset.Run:
+                    head.localPosition += Vector3.up * Mathf.Abs(wave) * walkBobHeight * 1.65f * speed;
+                    head.localRotation = headRotation * Quaternion.Euler(12f * speed, 0f, 0f);
+                    leftHand.localPosition += new Vector3(0f, wave * handTravel * 0.65f, wave * handTravel * 1.7f);
+                    rightHand.localPosition += new Vector3(0f, -wave * handTravel * 0.65f, -wave * handTravel * 1.7f);
+                    break;
+                case EnemyMovementAnimationPreset.Floating:
+                    head.localPosition += Vector3.up * (Mathf.Sin(phase * 0.45f) * walkBobHeight + walkBobHeight);
+                    break;
+                case EnemyMovementAnimationPreset.PhysicsRoll:
+                    break;
+                default:
+                    head.localPosition += Vector3.up * Mathf.Abs(wave) * walkBobHeight * speed;
+                    leftHand.localPosition += new Vector3(0f, wave * handTravel * 0.4f, wave * handTravel);
+                    rightHand.localPosition += new Vector3(0f, -wave * handTravel * 0.4f, -wave * handTravel);
+                    break;
+            }
         }
 
         private void AnimateHand(Transform hand, Quaternion rest, float t, float side)
@@ -151,33 +261,109 @@ namespace CoreKeepers
         private void AnimateSmash(float t)
         {
             GetAttackPhases(t, out var windup, out var strike, out var recover);
-            var rotation = Mathf.Lerp(windupAngle, -Mathf.Max(attackAngle, 165f), strike);
+            var rotation = Mathf.Lerp(smashWindupAngle, -Mathf.Abs(smashStrikeAngle), strike);
             rotation = Mathf.Lerp(rotation, 0f, recover);
-            leftHand.localRotation = leftRotation * Quaternion.Euler(rotation * Mathf.Max(windup, strike), 0f, -18f);
-            rightHand.localRotation = rightRotation * Quaternion.Euler(rotation * Mathf.Max(windup, strike), 0f, 18f);
-            var lift = Vector3.up * windupDistance * windup;
-            var drive = new Vector3(0f, -0.24f, strikeReach * 0.8f) * strike;
+            var poseWeight = Mathf.Max(windup, strike) * (1f - recover);
+            leftHand.localRotation = leftRotation * Quaternion.Euler(rotation * poseWeight, 0f,
+                -smashHandTilt * poseWeight);
+            rightHand.localRotation = rightRotation * Quaternion.Euler(rotation * poseWeight, 0f,
+                smashHandTilt * poseWeight);
+            var lift = Vector3.up * smashWindupDistance * windup;
+            var drive = new Vector3(0f, -smashStrikeDrop, smashStrikeReach) * strike;
             leftHand.localPosition += Vector3.Lerp(lift + drive, Vector3.zero, recover);
             rightHand.localPosition += Vector3.Lerp(lift + drive, Vector3.zero, recover);
-            head.localPosition += new Vector3(0f, -0.16f, 0.14f) * strike;
+            head.localPosition += new Vector3(0f, -smashHeadDrop, smashHeadReach) * strike;
             SetTrailEmission(IsTrailPhase(t), IsTrailPhase(t));
         }
 
         private void AnimateThrow(float t)
         {
-            var wave = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI);
-            rightHand.localRotation = rightRotation * Quaternion.Euler(-155f * wave, 20f * wave, 0f);
-            rightHand.localPosition += new Vector3(0.12f, 0.22f, 0.2f) * wave;
+            GetAttackPhases(t, out var windup, out var strike, out var recover);
+            var dig = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.22f));
+            var lift = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.18f) / 0.25f));
+            var throwWeight = Mathf.Max(windup, strike) * (1f - recover);
+            var handOffset = new Vector3(0f, Mathf.Lerp(-0.34f, 0.34f, lift), Mathf.Lerp(0.28f, -0.18f, windup));
+            leftHand.localPosition += handOffset + Vector3.right * 0.1f;
+            rightHand.localPosition += handOffset + Vector3.left * 0.1f;
+            leftHand.localRotation = leftRotation * Quaternion.Euler(Mathf.Lerp(75f, -150f, strike), 0f, -18f);
+            rightHand.localRotation = rightRotation * Quaternion.Euler(Mathf.Lerp(75f, -150f, strike), 0f, 18f);
+            head.localPosition += Vector3.down * 0.14f * dig;
+            if (heldRock != null)
+            {
+                heldRock.SetActive(t >= 0.16f && t < 0.61f);
+                heldRock.transform.localPosition = Vector3.Lerp(new Vector3(0f, 0.25f, 0.35f),
+                    new Vector3(0f, 1.25f, 0.05f), lift) + Vector3.forward * 0.12f * throwWeight;
+            }
+            SetTrailEmission(IsTrailPhase(t), IsTrailPhase(t));
         }
 
-        private void AnimateCast(float t, bool buff)
+        private void AnimateBowShot(float t)
+        {
+            GetAttackPhases(t, out var draw, out var release, out var recover);
+            var pose = Mathf.Max(draw, release) * (1f - recover);
+            leftHand.localPosition += new Vector3(-0.22f, 0.15f, 0.46f) * pose;
+            rightHand.localPosition += new Vector3(0.18f, 0.17f, Mathf.Lerp(0.34f, -0.22f, draw)) * pose;
+            leftHand.localRotation = leftRotation * Quaternion.Euler(-82f * pose, -18f * pose, -22f * pose);
+            rightHand.localRotation = rightRotation * Quaternion.Euler(-105f * pose, 32f * pose, 34f * pose);
+            head.localRotation = headRotation * Quaternion.Euler(0f, -8f * pose, 0f);
+        }
+
+        private void AnimateProjectileCast(float t, bool right)
+        {
+            var hand = right ? rightHand : leftHand;
+            var rest = right ? rightRotation : leftRotation;
+            var side = right ? 1f : -1f;
+            GetAttackPhases(t, out var windup, out var strike, out var recover);
+            var windupPosition = new Vector3(0.16f * side, 0.12f, -0.22f);
+            var releasePosition = new Vector3(0.08f * side, 0.08f, 1f);
+            var position = Vector3.Lerp(Vector3.zero, windupPosition, windup);
+            position = Vector3.Lerp(position, releasePosition, strike);
+            position = Vector3.Lerp(position, Vector3.zero, recover);
+            hand.localPosition += position;
+
+            var windupRotation = new Vector3(38f, -22f * side, -18f * side);
+            var releaseRotation = new Vector3(-92f, 12f * side, 18f * side);
+            var rotation = Vector3.Lerp(Vector3.zero, windupRotation, windup);
+            rotation = Vector3.Lerp(rotation, releaseRotation, strike);
+            rotation = Vector3.Lerp(rotation, Vector3.zero, recover);
+            hand.localRotation = rest * Quaternion.Euler(rotation);
+            head.localRotation = headRotation * Quaternion.Euler(0f, 7f * side * strike, 0f);
+        }
+
+        private void AnimateInstantSpell(float t)
         {
             var wave = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI);
-            var lift = buff ? 0.38f : 0.18f;
-            leftHand.localPosition += new Vector3(-0.1f, lift, 0.25f) * wave;
-            rightHand.localPosition += new Vector3(0.1f, lift, 0.25f) * wave;
-            leftHand.localRotation = leftRotation * Quaternion.Euler(-75f * wave, 0f, -30f * wave);
-            rightHand.localRotation = rightRotation * Quaternion.Euler(-75f * wave, 0f, 30f * wave);
+            rightHand.localPosition += new Vector3(0.08f, 0.62f, 0.08f) * wave;
+            rightHand.localRotation = rightRotation * Quaternion.Euler(-145f * wave, 0f, 24f * wave);
+            head.localRotation = headRotation * Quaternion.Euler(-12f * wave, 0f, 0f);
+        }
+
+        private void AnimateHeadAttack(float t)
+        {
+            GetAttackPhases(t, out var windup, out var strike, out var recover);
+            var position = Vector3.Lerp(Vector3.zero,
+                new Vector3(0f, headWindupLift, -headWindupDistance), windup);
+            position = Vector3.Lerp(position, new Vector3(0f, -headStrikeDrop, headStrikeReach), strike);
+            position = Vector3.Lerp(position, Vector3.zero, recover);
+            head.localPosition += position;
+
+            var rotation = Vector3.Lerp(Vector3.zero, new Vector3(headWindupAngle, 0f, 0f), windup);
+            rotation = Vector3.Lerp(rotation, new Vector3(headStrikeAngle, 0f, 0f), strike);
+            rotation = Vector3.Lerp(rotation, Vector3.zero, recover);
+            head.localRotation = headRotation * Quaternion.Euler(rotation);
+            SetTrailEmission(false, false, IsTrailPhase(t));
+        }
+
+        private void CreateHeldRock()
+        {
+            heldRock = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            heldRock.name = "Held Rock (Runtime)";
+            heldRock.transform.SetParent(transform, false);
+            heldRock.transform.localScale = Vector3.one * 0.38f;
+            Destroy(heldRock.GetComponent<Collider>());
+            var renderer = heldRock.GetComponent<Renderer>();
+            if (renderer != null) renderer.material.color = new Color(0.28f, 0.24f, 0.2f);
+            heldRock.SetActive(false);
         }
 
         private static void GetAttackPhases(float t, out float windup, out float strike, out float recover)
@@ -212,14 +398,15 @@ namespace CoreKeepers
             }
             var radians = angle * Mathf.Deg2Rad;
             var lift = Mathf.Sin(Mathf.Clamp01(strike) * Mathf.PI) * swooshLift;
-            return new Vector3(Mathf.Sin(radians) * swooshRadius * side, lift,
+            return new Vector3(-Mathf.Sin(radians) * swooshRadius * side, lift,
                 Mathf.Cos(radians) * Mathf.Max(swooshRadius, strikeReach)) * weight;
         }
 
-        private void SetTrailEmission(bool left, bool right)
+        private void SetTrailEmission(bool left, bool right, bool headAttack = false)
         {
             if (leftHandTrail != null) leftHandTrail.emitting = left;
             if (rightHandTrail != null) rightHandTrail.emitting = right;
+            if (headTrail != null) headTrail.emitting = headAttack;
         }
 
         private void CreateAttackTrails()
@@ -252,15 +439,16 @@ namespace CoreKeepers
             trailMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             trailMaterial.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
 
-            leftHandTrail = CreateHandTrail(leftHand, "LHand Attack Trail");
-            rightHandTrail = CreateHandTrail(rightHand, "RHand Attack Trail");
+            leftHandTrail = CreateAttackTrail(leftHand, "LHand Attack Trail", trailHandOffset);
+            rightHandTrail = CreateAttackTrail(rightHand, "RHand Attack Trail", trailHandOffset);
+            headTrail = CreateAttackTrail(head, "Head Attack Trail", trailHeadOffset);
         }
 
-        private TrailRenderer CreateHandTrail(Transform hand, string trailName)
+        private TrailRenderer CreateAttackTrail(Transform anchor, string trailName, Vector3 localOffset)
         {
             var trailObject = new GameObject(trailName);
-            trailObject.transform.SetParent(hand, false);
-            trailObject.transform.localPosition = trailHandOffset;
+            trailObject.transform.SetParent(anchor, false);
+            trailObject.transform.localPosition = localOffset;
             var trail = trailObject.AddComponent<TrailRenderer>();
             trail.time = trailLifetime;
             trail.minVertexDistance = 0.025f;

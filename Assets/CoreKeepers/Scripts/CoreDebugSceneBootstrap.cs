@@ -48,6 +48,9 @@ namespace CoreKeepers
             foreach (var enemyPrefab in Resources.LoadAll<GameObject>("Enemies"))
                 if (!manager.NetworkConfig.Prefabs.Contains(enemyPrefab))
                     manager.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = enemyPrefab });
+            foreach (var projectilePrefab in Resources.LoadAll<GameObject>("EnemyProjectiles"))
+                if (!manager.NetworkConfig.Prefabs.Contains(projectilePrefab))
+                    manager.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = projectilePrefab });
             var lootPrefab = Resources.Load<GameObject>("CoreLootPickup");
             if (lootPrefab != null && !manager.NetworkConfig.Prefabs.Contains(lootPrefab))
                 manager.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = lootPrefab });

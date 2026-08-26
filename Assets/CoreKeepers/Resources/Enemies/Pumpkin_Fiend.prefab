@@ -60,10 +60,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: Pumpkin_Fiend
       objectReference: {fileID: 0}
+    - target: {fileID: 2370613790963781556, guid: 0757d85d1fd1ef549b266d0cc076b717, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4225482295308793766, guid: 0757d85d1fd1ef549b266d0cc076b717, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: b2c922a3595723f41a61bc20b6bfc563, type: 2}
+    - target: {fileID: 5939569686021423368, guid: 0757d85d1fd1ef549b266d0cc076b717, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -107,7 +115,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 0
+  GlobalObjectIdHash: 2542944777
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -189,8 +197,8 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!136 &44505779083272095
-CapsuleCollider:
+--- !u!135 &44505779083272095
+SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -207,11 +215,9 @@ CapsuleCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.45
-  m_Height: 1.8
-  m_Direction: 1
-  m_Center: {x: 0, y: 0.9, z: 0}
+  serializedVersion: 3
+  m_Radius: 0.62
+  m_Center: {x: 0, y: 0.62, z: 0}
 --- !u!54 &7301763807490975498
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -234,9 +240,9 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 0
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!114 &7732084160861995586
@@ -255,6 +261,7 @@ MonoBehaviour:
   barricadePriorityRange: 1
   defenseDetectionRange: 7
   heroDetectionRange: 7
+  heroPriorityRange: 2
   targetRefreshInterval: 0.25
   canPassThroughBarricades: 0
   assassin: 0
@@ -268,6 +275,8 @@ MonoBehaviour:
   heroAggroDuration: 10
   tauntDuration: 15
   deathAnimationDuration: 1.1
+  explosionEffectPrefab: {fileID: 0}
+  explosionEffectLifetime: 2
   coreShardsDropMin: 0
   coreShardsDropMax: 0
   resistant_Freeze: 0
@@ -295,6 +304,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2e57fb2f21a4fa49cdf51625443bf12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.EnemyProceduralAnimator
+  attackPreset: 6
+  movementPreset: 3
+  projectilePrefab: {fileID: 0}
+  projectileReleaseTime: 0.55
   walkFrequency: 7
   walkBobHeight: 0.12
   handTravel: 0.2

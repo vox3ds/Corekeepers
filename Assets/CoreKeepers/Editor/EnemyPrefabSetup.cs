@@ -12,8 +12,9 @@ using UnityEngine.AI;
 
 public static class EnemyPrefabSetup
 {
-    private const string SetupVersionKey = "CoreKeepers.EnemyPrefabSetup.v1";
+    private const string SetupVersionKey = "CoreKeepers.EnemyPrefabSetup.v4";
     private const string EnemyDirectory = "Assets/CoreKeepers/Resources/Enemies";
+    private const string ProjectileDirectory = "Assets/CoreKeepers/Resources/EnemyProjectiles";
     private const string TrapPath = "Assets/CoreKeepers/Resources/Buildings/TrapPlate.prefab";
     private const string NetworkPrefabListPath = "Assets/DefaultNetworkPrefabs.asset";
 
@@ -46,6 +47,7 @@ public static class EnemyPrefabSetup
     [MenuItem("Core Keepers/Configure Enemy Prefabs")]
     public static void ConfigureAll()
     {
+        ConfigureProjectilePrefabs();
         foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { EnemyDirectory }))
             ConfigureEnemy(AssetDatabase.GUIDToAssetPath(guid));
         ConfigureTrapPlate();
@@ -87,20 +89,49 @@ public static class EnemyPrefabSetup
             }
             collider.isTrigger = false;
             var body = AddIfMissing<Rigidbody>(root);
-            body.isKinematic = true;
-            body.useGravity = false;
+            var enemyName = Path.GetFileNameWithoutExtension(path);
+            var physicsRoll = enemyName == "Pumpkin_Fiend";
+            body.isKinematic = !physicsRoll;
+            body.useGravity = physicsRoll;
+            body.interpolation = RigidbodyInterpolation.Interpolate;
+
+            if (physicsRoll)
+            {
+                if (collider is CapsuleCollider oldCapsule)
+                    Object.DestroyImmediate(oldCapsule);
+                var sphere = root.GetComponent<SphereCollider>() ?? root.AddComponent<SphereCollider>();
+                sphere.radius = 0.62f;
+                sphere.center = Vector3.up * 0.62f;
+                collider = sphere;
+            }
 
             var brain = AddIfMissing<EnemyBrain>(root);
             var animator = AddIfMissing<EnemyProceduralAnimator>(root);
             var serialized = new SerializedObject(brain);
-            var enemyName = Path.GetFileNameWithoutExtension(path);
             serialized.FindProperty("canPassThroughBarricades").boolValue = IsOneOf(enemyName,
                 "Banshee", "Ghost", "Water_Slime", "Storm_Elemental", "Poison_Slime");
             serialized.FindProperty("assassin").boolValue = IsOneOf(enemyName,
                 "Vampire", "Cursed_Doll", "Warlock", "Poison_Slime", "Chompfin");
             serialized.ApplyModifiedPropertiesWithoutUndo();
             var animatorSerialized = new SerializedObject(animator);
+            if (physicsRoll)
+            {
+                animatorSerialized.FindProperty("movementPreset").enumValueIndex =
+                    (int)EnemyMovementAnimationPreset.PhysicsRoll;
+                animatorSerialized.FindProperty("attackPreset").enumValueIndex =
+                    (int)EnemyAttackAnimationPreset.None;
+            }
             var attackAngle = animatorSerialized.FindProperty("attackAngle");
+            var attackPreset = animatorSerialized.FindProperty("attackPreset");
+            if (attackPreset.enumValueIndex == (int)EnemyAttackAnimationPreset.AlternatingMagicProjectile)
+            {
+                var attackRange = serialized.FindProperty("attackRange");
+                if (attackRange.floatValue < 6.6f) attackRange.floatValue = 6.6f;
+                var projectilePath = $"{ProjectileDirectory}/{enemyName}_Projectile.prefab";
+                animatorSerialized.FindProperty("projectilePrefab").objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<GameObject>(projectilePath);
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
             var swooshArc = animatorSerialized.FindProperty("swooshArc");
             var swooshRadius = animatorSerialized.FindProperty("swooshRadius");
             if (attackAngle.floatValue < 165f) attackAngle.floatValue = 165f;
@@ -112,6 +143,76 @@ public static class EnemyPrefabSetup
         finally
         {
             PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    private static void ConfigureProjectilePrefabs()
+    {
+        if (!AssetDatabase.IsValidFolder(ProjectileDirectory))
+            AssetDatabase.CreateFolder("Assets/CoreKeepers/Resources", "EnemyProjectiles");
+
+        var magicEnemies = new[]
+        {
+            "Mummy", "Dark_Elf", "Book", "Demon", "Storm_Elemental", "Warlock", "Water_Slime", "Witch"
+        };
+        var colors = new[]
+        {
+            new Color(0.7f, 0.25f, 1f), new Color(0.3f, 0.8f, 1f), new Color(1f, 0.35f, 0.8f),
+            new Color(1f, 0.15f, 0.08f), new Color(0.25f, 0.7f, 1f), new Color(0.6f, 0.1f, 1f),
+            new Color(0.1f, 0.9f, 0.85f), new Color(0.75f, 0.2f, 1f)
+        };
+        for (var index = 0; index < magicEnemies.Length; index++)
+            ConfigureProjectilePrefab(magicEnemies[index], colors[index]);
+    }
+
+    private static void ConfigureProjectilePrefab(string enemyName, Color color)
+    {
+        var prefabPath = $"{ProjectileDirectory}/{enemyName}_Projectile.prefab";
+        var materialPath = $"{ProjectileDirectory}/{enemyName}_Projectile.mat";
+        var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+        if (material == null)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            material = new Material(shader) { name = $"{enemyName} Projectile" };
+            AssetDatabase.CreateAsset(material, materialPath);
+        }
+        material.color = color;
+        if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+        var emission = color * 5f;
+        if (material.HasProperty("_EmissionColor")) material.SetColor("_EmissionColor", emission);
+        material.EnableKeyword("_EMISSION");
+        EditorUtility.SetDirty(material);
+
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        var root = existing != null ? PrefabUtility.LoadPrefabContents(prefabPath) : GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        try
+        {
+            root.name = $"{enemyName}_Projectile";
+            root.transform.localScale = Vector3.one * 0.38f;
+            var renderer = root.GetComponent<Renderer>();
+            if (renderer != null) renderer.sharedMaterial = material;
+            var collider = root.GetComponent<SphereCollider>() ?? root.AddComponent<SphereCollider>();
+            collider.isTrigger = true;
+            AddIfMissing<NetworkObject>(root);
+            AddIfMissing<NetworkTransform>(root);
+            AddIfMissing<EnemyProjectile>(root);
+            var light = root.GetComponentInChildren<Light>();
+            if (light == null)
+            {
+                var lightObject = new GameObject("Glow");
+                lightObject.transform.SetParent(root.transform, false);
+                light = lightObject.AddComponent<Light>();
+            }
+            light.type = LightType.Point;
+            light.color = color;
+            light.intensity = 3f;
+            light.range = 2.5f;
+            PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+        }
+        finally
+        {
+            if (existing != null) PrefabUtility.UnloadPrefabContents(root);
+            else Object.DestroyImmediate(root);
         }
     }
 
@@ -156,6 +257,13 @@ public static class EnemyPrefabSetup
             if (networkObject == null || !registeredHashes.Add(networkObject.PrefabIdHash))
                 continue;
             networkPrefabs.Add(new NetworkPrefab { Prefab = enemyPrefab });
+        }
+        foreach (var projectilePrefab in Resources.LoadAll<GameObject>("EnemyProjectiles"))
+        {
+            var networkObject = projectilePrefab.GetComponent<NetworkObject>();
+            if (networkObject == null || !registeredHashes.Add(networkObject.PrefabIdHash))
+                continue;
+            networkPrefabs.Add(new NetworkPrefab { Prefab = projectilePrefab });
         }
         EditorUtility.SetDirty(networkPrefabs);
     }

@@ -107,7 +107,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 0
+  GlobalObjectIdHash: 857485912
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -236,7 +236,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 0
   m_IsKinematic: 1
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!114 &748780227928795981
@@ -255,6 +255,7 @@ MonoBehaviour:
   barricadePriorityRange: 1
   defenseDetectionRange: 7
   heroDetectionRange: 7
+  heroPriorityRange: 2
   targetRefreshInterval: 0.25
   canPassThroughBarricades: 1
   assassin: 0
@@ -264,10 +265,12 @@ MonoBehaviour:
   attackRange: 1.4
   attackDuration: 0.55
   attackCooldown: 1.1
-  movementSpeed: 3.5
+  movementSpeed: 15
   heroAggroDuration: 10
   tauntDuration: 15
   deathAnimationDuration: 1.1
+  explosionEffectPrefab: {fileID: 0}
+  explosionEffectLifetime: 2
   coreShardsDropMin: 0
   coreShardsDropMax: 0
   resistant_Freeze: 0
@@ -295,17 +298,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2e57fb2f21a4fa49cdf51625443bf12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.EnemyProceduralAnimator
+  attackPreset: 0
+  movementPreset: 2
+  projectilePrefab: {fileID: 0}
+  projectileReleaseTime: 0.55
   walkFrequency: 7
   walkBobHeight: 0.12
   handTravel: 0.2
   attackAngle: 165
-  windupAngle: 105
-  windupDistance: 0.28
-  strikeReach: 0.52
+  windupAngle: 38.6
+  windupDistance: 2
+  strikeReach: 1.1
   swooshArc: 220
-  swooshRadius: 0.7
-  swooshLift: 0.16
-  trailColor: {r: 0.25, g: 0.8, b: 1, a: 1}
+  swooshRadius: 1.37
+  swooshLift: 0.02
+  trailColor: {r: 1, g: 3.2, b: 4, a: 1}
   trailEmissionIntensity: 4
   trailWidth: 0.22
   trailLifetime: 0.22

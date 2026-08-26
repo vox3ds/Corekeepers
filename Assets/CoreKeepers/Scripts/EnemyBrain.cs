@@ -12,12 +12,15 @@ namespace CoreKeepers
         Attack_RHand,
         Smash,
         ThrowRock,
-        CastProjectile,
+        BowShot,
+        CastProjectile_LHand,
+        CastProjectile_RHand,
         CastBuff,
         TakeHit,
         Freeze,
         Burn,
-        Die
+        Die,
+        HeadAttack
     }
 
     [System.Flags]
@@ -41,6 +44,7 @@ namespace CoreKeepers
         [SerializeField, Min(0.1f)] private float barricadePriorityRange = 1f;
         [SerializeField, Min(0.1f)] private float defenseDetectionRange = 7f;
         [SerializeField, Min(0.1f)] private float heroDetectionRange = 7f;
+        [SerializeField, Min(0.1f)] private float heroPriorityRange = 2f;
         [SerializeField, Min(0.05f)] private float targetRefreshInterval = 0.25f;
         [SerializeField] private bool canPassThroughBarricades;
         [SerializeField] private bool assassin;
@@ -56,6 +60,11 @@ namespace CoreKeepers
         [SerializeField, Min(0f)] private float heroAggroDuration = 10f;
         [SerializeField, Min(0f)] private float tauntDuration = 15f;
         [SerializeField, Min(0.05f)] private float deathAnimationDuration = 1.1f;
+
+        [Header("Physics Roll")]
+        [SerializeField] private GameObject explosionEffectPrefab;
+        [SerializeField, Min(0.05f)] private float explosionEffectLifetime = 2f;
+
         [Header("Loot")]
         [SerializeField, Min(0)] private int coreShardsDropMin;
         [SerializeField, Min(0)] private int coreShardsDropMax;
@@ -86,11 +95,15 @@ namespace CoreKeepers
 
         private readonly double[] debuffEndsAt = new double[6];
         private NavMeshAgent agent;
+        private Rigidbody body;
+        private EnemyProceduralAnimator proceduralAnimator;
         private NetworkObject currentTarget;
         private Collider[] currentTargetColliders;
         private NetworkWarrior forcedHero;
         private double forcedHeroEndsAt;
         private bool forcedByTaunt;
+        private NetworkWarrior proximityAggroHero;
+        private double proximityAggroEndsAt;
         private double nextTargetRefreshAt;
         private double nextAttackAt;
         private double nextFireTickAt;
@@ -99,6 +112,11 @@ namespace CoreKeepers
         private Vector3 previousPosition;
         private float normalizedSpeed;
         private bool nextAttackUsesRightHand;
+        private NetworkObject pendingProjectileTarget;
+        private double pendingProjectileAt;
+        private bool pendingProjectileRightSide;
+        private Vector3 rollingDirection;
+        private bool exploded;
         private bool bypassingBarricade;
         private double barricadeBypassEndsAt;
 
@@ -125,17 +143,29 @@ namespace CoreKeepers
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
+            body = GetComponent<Rigidbody>();
+            proceduralAnimator = GetComponent<EnemyProceduralAnimator>();
             previousPosition = transform.position;
         }
 
         public override void OnNetworkSpawn()
         {
-            agent.enabled = IsServer;
+            var physicsRoll = proceduralAnimator != null && proceduralAnimator.UsesPhysicsRolling;
+            agent.enabled = IsServer && !physicsRoll;
+            if (body != null)
+            {
+                body.isKinematic = !IsServer || !physicsRoll;
+                body.useGravity = physicsRoll;
+                body.interpolation = RigidbodyInterpolation.Interpolate;
+            }
             if (!IsServer)
                 return;
             health.Value = maximumHealth;
-            agent.speed = movementSpeed;
-            agent.stoppingDistance = attackRange * 0.85f;
+            if (agent.enabled)
+            {
+                agent.speed = movementSpeed;
+                agent.stoppingDistance = attackRange * 0.85f;
+            }
             FindAndSetCore();
         }
 
@@ -155,24 +185,61 @@ namespace CoreKeepers
                 return;
             }
 
+            UpdatePendingProjectile(now);
+
             if (animationState.Value != EnemyAnimationState.Idle && now >= animationEndsAt.Value)
                 animationState.Value = EnemyAnimationState.Idle;
             if (IsImmobilized())
             {
                 if (agent.enabled) agent.isStopped = true;
+                rollingDirection = Vector3.zero;
                 return;
             }
 
             if (agent.enabled) agent.isStopped = false;
-            ApplyMovementSpeed();
+            if (agent.enabled) ApplyMovementSpeed();
             if (now >= nextTargetRefreshAt)
             {
                 nextTargetRefreshAt = now + targetRefreshInterval;
                 SelectTarget(now);
             }
+            if (proceduralAnimator != null && proceduralAnimator.UsesPhysicsRolling)
+            {
+                FollowWithPhysics();
+                return;
+            }
             if (UpdateBarricadeBypass(now))
                 return;
             FollowAndAttack(now);
+        }
+
+        private void FixedUpdate()
+        {
+            if (!IsServer || body == null || body.isKinematic || rollingDirection.sqrMagnitude < 0.001f)
+                return;
+            var desiredVelocity = rollingDirection * movementSpeed;
+            var planarVelocity = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
+            body.AddForce((desiredVelocity - planarVelocity) * 8f, ForceMode.Acceleration);
+            var rollAxis = Vector3.Cross(Vector3.up, rollingDirection);
+            body.AddTorque(rollAxis * movementSpeed * 2.2f, ForceMode.Acceleration);
+        }
+
+        private void FollowWithPhysics()
+        {
+            rollingDirection = Vector3.zero;
+            if (!IsValidTarget(currentTarget))
+            {
+                FindAndSetCore();
+                return;
+            }
+            var offset = ClosestTargetPoint(currentTarget) - transform.position;
+            offset.y = 0f;
+            if (offset.magnitude <= attackRange)
+            {
+                Explode();
+                return;
+            }
+            rollingDirection = offset.normalized;
         }
 
         private void UpdateMeasuredSpeed()
@@ -187,7 +254,45 @@ namespace CoreKeepers
 
         private void SelectTarget(double now)
         {
-            var barricade = canPassThroughBarricades ? null : FindClosestBuilding(CoreBuildingType.Barricade, barricadePriorityRange);
+            if (HasActiveTaunt(now))
+            {
+                var tauntBarricade = canPassThroughBarricades
+                    ? null
+                    : FindClosestBuilding(CoreBuildingType.Barricade, barricadePriorityRange);
+                SetTarget(tauntBarricade != null ? tauntBarricade.NetworkObject : forcedHero.NetworkObject);
+                return;
+            }
+
+            var nearbyPriorityHero = coreOnly ? null : FindClosestHero(heroPriorityRange);
+            var priorityHero = nearbyPriorityHero != null
+                ? nearbyPriorityHero
+                : IsActiveProximityAggro(now) ? proximityAggroHero : null;
+            if (priorityHero != null)
+            {
+                var heroSqrDistance = HorizontalSqrDistance(priorityHero.transform.position);
+                var comparisonRange = Mathf.Max(barricadePriorityRange, Mathf.Sqrt(heroSqrDistance));
+                var closerBarricade = canPassThroughBarricades
+                    ? null
+                    : FindClosestBuilding(CoreBuildingType.Barricade, comparisonRange);
+                if (closerBarricade != null && SqrDistanceToBuilding(closerBarricade) < heroSqrDistance)
+                {
+                    SetTarget(closerBarricade.NetworkObject);
+                    return;
+                }
+
+                if (nearbyPriorityHero != null)
+                {
+                    proximityAggroHero = nearbyPriorityHero;
+                    proximityAggroEndsAt = now + heroAggroDuration * 0.5d;
+                }
+                SetTarget(priorityHero.NetworkObject);
+                return;
+            }
+            proximityAggroHero = null;
+
+            var barricade = canPassThroughBarricades
+                ? null
+                : FindClosestBuilding(CoreBuildingType.Barricade, barricadePriorityRange);
             if (barricade != null)
             {
                 SetTarget(barricade.NetworkObject);
@@ -225,6 +330,12 @@ namespace CoreKeepers
             FindAndSetCore();
         }
 
+        private bool HasActiveTaunt(double now) => forcedByTaunt && forcedHero != null && forcedHero.IsSpawned &&
+            !forcedHero.IsDowned && now < forcedHeroEndsAt;
+
+        private bool IsActiveProximityAggro(double now) => proximityAggroHero != null &&
+            proximityAggroHero.IsSpawned && !proximityAggroHero.IsDowned && now < proximityAggroEndsAt;
+
         private void FollowAndAttack(double now)
         {
             if (!IsValidTarget(currentTarget))
@@ -250,11 +361,67 @@ namespace CoreKeepers
             if (now < nextAttackAt)
                 return;
 
+            var attackState = proceduralAnimator != null
+                ? proceduralAnimator.GetNextAttackState(ref nextAttackUsesRightHand)
+                : (nextAttackUsesRightHand ? EnemyAnimationState.Attack_RHand : EnemyAnimationState.Attack_LHand);
+            if (attackState == EnemyAnimationState.Idle)
+                return;
             nextAttackAt = now + attackCooldown;
-            PlayAnimation(nextAttackUsesRightHand ? EnemyAnimationState.Attack_RHand : EnemyAnimationState.Attack_LHand,
-                attackDuration);
-            nextAttackUsesRightHand = !nextAttackUsesRightHand;
-            DamageCurrentTarget();
+            PlayAnimation(attackState, attackDuration);
+            if (proceduralAnimator == null) nextAttackUsesRightHand = !nextAttackUsesRightHand;
+            if (attackState == EnemyAnimationState.CastProjectile_LHand ||
+                attackState == EnemyAnimationState.CastProjectile_RHand)
+                QueueMagicProjectile(attackState == EnemyAnimationState.CastProjectile_RHand, now);
+            else
+                DamageCurrentTarget();
+        }
+
+        private void QueueMagicProjectile(bool rightSide, double now)
+        {
+            pendingProjectileTarget = currentTarget;
+            pendingProjectileRightSide = rightSide;
+            var releaseTime = proceduralAnimator != null ? proceduralAnimator.ProjectileReleaseTime : 0.55f;
+            pendingProjectileAt = now + attackDuration * releaseTime;
+        }
+
+        private void UpdatePendingProjectile(double now)
+        {
+            if (pendingProjectileTarget == null || now < pendingProjectileAt)
+                return;
+            var expectedState = pendingProjectileRightSide
+                ? EnemyAnimationState.CastProjectile_RHand
+                : EnemyAnimationState.CastProjectile_LHand;
+            var target = pendingProjectileTarget;
+            pendingProjectileTarget = null;
+            if (animationState.Value != expectedState || !IsValidTarget(target))
+                return;
+            SpawnMagicProjectile(pendingProjectileRightSide, target);
+        }
+
+        private void SpawnMagicProjectile(bool rightSide, NetworkObject target)
+        {
+            var prefab = proceduralAnimator != null ? proceduralAnimator.ProjectilePrefab : null;
+            if (prefab == null)
+            {
+                Debug.LogError($"Enemy '{name}' uses Alternating Magic Projectile but has no projectile prefab.", this);
+                return;
+            }
+            if (target == null || !target.IsSpawned)
+                return;
+            var origin = proceduralAnimator.GetProjectileOrigin(rightSide);
+            var direction = target.transform.position - origin;
+            if (direction.sqrMagnitude < 0.001f) direction = transform.forward;
+            var instance = Instantiate(prefab, origin, Quaternion.LookRotation(direction.normalized));
+            var projectile = instance.GetComponent<EnemyProjectile>();
+            var projectileNetworkObject = instance.GetComponent<NetworkObject>();
+            if (projectile == null || projectileNetworkObject == null)
+            {
+                Destroy(instance);
+                Debug.LogError($"Projectile prefab '{prefab.name}' requires EnemyProjectile and NetworkObject.", prefab);
+                return;
+            }
+            projectileNetworkObject.Spawn(true);
+            projectile.Initialize(target, damage);
         }
 
         private bool UpdateBarricadeBypass(double now)
@@ -340,8 +507,13 @@ namespace CoreKeepers
                     Mathf.Max(coreShardsDropMin, coreShardsDropMax) + 1);
                 if (shards > 0)
                     CoreLootPickup.Spawn(MinedResourceKind.CoreShards, shards, transform.position);
-                PlayAnimation(EnemyAnimationState.Die, deathAnimationDuration);
-                despawnAt = NetworkManager.ServerTime.Time + deathAnimationDuration;
+                if (proceduralAnimator != null && proceduralAnimator.UsesPhysicsRolling)
+                    Explode();
+                else
+                {
+                    PlayAnimation(EnemyAnimationState.Die, deathAnimationDuration);
+                    despawnAt = NetworkManager.ServerTime.Time + deathAnimationDuration;
+                }
                 return;
             }
             PlayAnimation(EnemyAnimationState.TakeHit, 0.28f);
@@ -467,6 +639,37 @@ namespace CoreKeepers
             animationEndsAt.Value = animationStartedAt.Value + duration;
         }
 
+        private void Explode()
+        {
+            if (exploded || !IsServer) return;
+            exploded = true;
+            rollingDirection = Vector3.zero;
+            if (body != null) body.linearVelocity = Vector3.zero;
+            if (IsValidTarget(currentTarget)) DamageCurrentTarget();
+            SpawnExplosionRpc(transform.position);
+            despawnAt = NetworkManager.ServerTime.Time + 0.15d;
+            health.Value = 0f;
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void SpawnExplosionRpc(Vector3 position)
+        {
+            if (explosionEffectPrefab != null)
+            {
+                var configuredEffect = Instantiate(explosionEffectPrefab, position, Quaternion.identity);
+                Destroy(configuredEffect, explosionEffectLifetime);
+                return;
+            }
+            var effect = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            effect.name = "Pumpkin Explosion";
+            effect.transform.position = position + Vector3.up * 0.65f;
+            effect.transform.localScale = Vector3.one * 0.25f;
+            Destroy(effect.GetComponent<Collider>());
+            var renderer = effect.GetComponent<Renderer>();
+            if (renderer != null) renderer.material.color = new Color(1f, 0.24f, 0.03f, 1f);
+            effect.AddComponent<EnemyExplosionEffect>();
+        }
+
         private CoreBuilding FindClosestDefense(float range)
         {
             CoreBuilding closest = null;
@@ -575,6 +778,29 @@ namespace CoreKeepers
             if (building != null) return building.Health > 0f;
             var core = target.GetComponent<CoreDebugDeposit>();
             return core != null && core.CurrentHealth > 0f;
+        }
+    }
+
+    public sealed class EnemyExplosionEffect : MonoBehaviour
+    {
+        private const float Lifetime = 0.45f;
+        private const float MaximumScale = 4f;
+        private float age;
+
+        private void Update()
+        {
+            age += Time.deltaTime;
+            var progress = Mathf.Clamp01(age / Lifetime);
+            transform.localScale = Vector3.one * Mathf.Lerp(0.25f, MaximumScale,
+                1f - (1f - progress) * (1f - progress));
+            var effectRenderer = GetComponent<Renderer>();
+            if (effectRenderer != null)
+            {
+                var color = effectRenderer.material.color;
+                color.a = 1f - progress;
+                effectRenderer.material.color = color;
+            }
+            if (age >= Lifetime) Destroy(gameObject);
         }
     }
 }

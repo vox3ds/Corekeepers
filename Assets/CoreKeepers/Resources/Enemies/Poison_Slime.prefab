@@ -107,7 +107,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 0
+  GlobalObjectIdHash: 3471107920
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -236,7 +236,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 0
   m_IsKinematic: 1
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!114 &1434720164907527857
@@ -255,6 +255,7 @@ MonoBehaviour:
   barricadePriorityRange: 1
   defenseDetectionRange: 7
   heroDetectionRange: 7
+  heroPriorityRange: 2
   targetRefreshInterval: 0.25
   canPassThroughBarricades: 1
   assassin: 1
@@ -268,6 +269,8 @@ MonoBehaviour:
   heroAggroDuration: 10
   tauntDuration: 15
   deathAnimationDuration: 1.1
+  explosionEffectPrefab: {fileID: 0}
+  explosionEffectLifetime: 2
   coreShardsDropMin: 0
   coreShardsDropMax: 0
   resistant_Freeze: 0
@@ -295,6 +298,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2e57fb2f21a4fa49cdf51625443bf12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.EnemyProceduralAnimator
+  attackPreset: 5
+  movementPreset: 0
+  projectilePrefab: {fileID: 0}
+  projectileReleaseTime: 0.55
   walkFrequency: 7
   walkBobHeight: 0.12
   handTravel: 0.2
