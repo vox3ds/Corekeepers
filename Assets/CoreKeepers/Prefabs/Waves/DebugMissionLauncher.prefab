@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 4091242368
+  GlobalObjectIdHash: 781492561
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -72,7 +72,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.CoreMissionWaveController
   ShowTopMostFoldoutHeaderGroup: 1
-  missionToPlay: 0
+  missionToPlay: 1
   missionDatabase: {fileID: 11400000, guid: dd48f90cbdb5a184496d4980e71b114e, type: 2}
   preparationDuration: 60
   waveReleaseDuration: 30

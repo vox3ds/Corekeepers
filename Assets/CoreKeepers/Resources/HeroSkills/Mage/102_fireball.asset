@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a64774a470746618e3f20b8145ad5fe, type: 3}
+  m_Name: 102_fireball
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.HeroSkillDefinition
+  stableId: 102
+  displayName: Fireball
+  heroClass: 1
+  skillType: 1
+  unlockWave: 1
+  cooldown: 8
+  icon64: {fileID: 21300000, guid: 09fc756c2439e124ab25b0cd4757cda0, type: 3}
+  icon256: {fileID: 21300000, guid: 09faf0184fbeda84a993d86bd9c52546, type: 3}
+  description: "Fireball \u2014 Active skill unlocked at wave 1. Values are editable
+    in this asset."
+  targeting: 0
+  effect: 8
+  debuff: 16
+  power: 58
+  radius: 3.5
+  duration: 5
+  secondaryValue: 16
+  count: 1

@@ -8,7 +8,19 @@ using UnityEngine.SceneManagement;
 
 namespace CoreKeepers
 {
-    public enum WarriorAction : byte { None, Attack, Build, Mine, Deposit, Revive }
+    public enum WarriorAction : byte
+    {
+        None,
+        Attack,
+        Build,
+        Mine,
+        Deposit,
+        Revive,
+        Whirlwind,
+        ShieldBash,
+        BattleCharge,
+        Earthshatter
+    }
     public enum ContextInteraction : byte { None, AttackEnemy, MineResource, BuildOrRepair, RevivePlayer, DepositResources }
     public enum CorePlayerClass : byte { Warrior, Mage, Builder, Healer }
 
@@ -18,6 +30,7 @@ namespace CoreKeepers
         private const int DefaultCarryingCapacity = 20;
         private const int BuilderCarryingCapacity = 30;
         private const ulong NoResurrector = ulong.MaxValue;
+        private const float WhirlwindTurns = 15f;
 
         [Header("Point And Click Movement")]
         [SerializeField, Min(0.1f)] private float movementSpeed = 6f;
@@ -66,6 +79,8 @@ namespace CoreKeepers
         private readonly NetworkVariable<ulong> resurrectorId = new(NoResurrector);
         private readonly NetworkVariable<double> resurrectionStartedAt = new(0d);
         private readonly NetworkVariable<double> resurrectionEndsAt = new(0d);
+        private readonly NetworkVariable<Vector3> leapStart = new(Vector3.zero);
+        private readonly NetworkVariable<Vector3> leapEnd = new(Vector3.zero);
         private NavMeshAgent agent;
         private NetworkObject interactionTarget;
         private ContextInteraction interaction;
@@ -82,18 +97,31 @@ namespace CoreKeepers
         private uint resurrectionDamageRevision;
         private uint damageRevision;
         private GameObject playerMarker;
+        private HeroSkillController heroSkills;
+        private double statusProtectionEndsAt;
+        private double workSpeedEndsAt;
+        private float workSpeedMultiplier = 1f;
+        private double externalDamageBonusEndsAt;
+        private float externalDamageMultiplier = 1f;
+        private double externalResistanceEndsAt;
+        private float externalResistance;
+        private bool leapMovementActive;
+        private bool whirlwindMovementActive;
+        private Quaternion whirlwindStartRotation;
         private static int lastDebugClassSwitchFrame = -1;
 
         public static NetworkWarrior Local { get; private set; }
         public WarriorAction CurrentAction => action.Value;
         public int CarriedResources => carriedOre.Value + carriedCoreShards.Value;
-        public int CarryingCapacity => GetCarryingCapacity(syncedPlayerClass.Value);
+        public int CarryingCapacity => Mathf.RoundToInt(GetCarryingCapacity(syncedPlayerClass.Value) *
+            (heroSkills != null ? heroSkills.CarryingCapacityMultiplier : 1f));
         public int CarriedOre => carriedOre.Value;
         public int CarriedCoreShards => carriedCoreShards.Value;
         public int PlayerNumber => (int)(OwnerClientId % (ulong)CoreSessionManager.PlayerLimit) + 1;
         public int PlayerLevel => playerLevel.Value;
         public float CurrentHealth => currentHealth.Value;
         public float MaximumHealth => maximumHealth.Value;
+        public float HealthRatio => maximumHealth.Value > 0f ? currentHealth.Value / maximumHealth.Value : 0f;
         public string Nickname => nickname.Value.ToString();
         public float NormalizedSpeed => normalizedSpeed;
         public int ActionVariant => actionVariant.Value;
@@ -125,6 +153,7 @@ namespace CoreKeepers
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
+            heroSkills = GetComponent<HeroSkillController>() ?? gameObject.AddComponent<HeroSkillController>();
             agent.speed = movementSpeed;
             agent.acceleration = acceleration;
             agent.angularSpeed = rotationSpeed;
@@ -155,6 +184,7 @@ namespace CoreKeepers
                 Local = this;
                 SetNicknameRpc(string.IsNullOrWhiteSpace(CoreSettings.Nickname) ? "Player" : CoreSettings.Nickname);
             }
+            heroSkills?.InitializeForMission();
             AttachPlayerMarker();
         }
 
@@ -178,9 +208,14 @@ namespace CoreKeepers
             if (IsServer)
                 UpdateResurrectionChannel();
             if (IsServer && action.Value != WarriorAction.None && NetworkManager.ServerTime.Time >= actionEndsAt.Value)
+            {
+                if (action.Value == WarriorAction.BattleCharge)
+                    FinishLeapRpc(leapEnd.Value);
                 action.Value = WarriorAction.None;
+            }
             if (!IsOwner || SceneManager.GetActiveScene().name != CoreSessionManager.DebugSceneName)
                 return;
+            UpdateSpecialMovement();
             if (Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame &&
                 lastDebugClassSwitchFrame != Time.frameCount)
             {
@@ -193,11 +228,14 @@ namespace CoreKeepers
                 if (agent != null && agent.enabled && agent.isOnNavMesh) agent.ResetPath();
                 return;
             }
+            if (action.Value is WarriorAction.BattleCharge or WarriorAction.Earthshatter)
+                return;
             if (Keyboard.current != null && Keyboard.current.kKey.wasPressedThisFrame)
                 SetDebugDownedRpc(true);
             if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
                 TryStartResurrection(FindNearestDownedHero(interactionRange));
-            HandleLeftPointer();
+            if (heroSkills == null || !heroSkills.BlocksLocalGameplay)
+                HandleLeftPointer();
             UpdateContextInteraction();
         }
 
@@ -205,18 +243,42 @@ namespace CoreKeepers
         {
             var mouse = Mouse.current;
             if (mouse == null || !mouse.leftButton.isPressed ||
-                (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
-                (CoreRadialMenu.Instance != null && CoreRadialMenu.Instance.IsOpen)) return;
+                GameplayInputGate.IsPointerBlocked) return;
             if (!mouse.leftButton.wasPressedThisFrame && Time.unscaledTime < nextHeldCommandAt) return;
             nextHeldCommandAt = Time.unscaledTime + heldCommandInterval;
             var camera = Camera.main;
-            if (camera == null || !Physics.Raycast(camera.ScreenPointToRay(mouse.position.ReadValue()), out var hit, 500f)) return;
+            if (camera == null) return;
+            var pointerRay = camera.ScreenPointToRay(mouse.position.ReadValue());
+            if (!Physics.Raycast(pointerRay, out var hit, 500f))
+            {
+                if (IsShiftHeld())
+                {
+                    var direction = pointerRay.direction;
+                    direction.y = 0f;
+                    if (direction.sqrMagnitude < 0.01f) direction = transform.forward;
+                    var attackPoint = transform.position + direction.normalized * attackRange;
+                    StopForForcedAttack(attackPoint);
+                    heroSkills?.TryUseSelectedInPlace(attackPoint);
+                }
+                return;
+            }
 
             var player = hit.collider.GetComponentInParent<NetworkWarrior>();
             if (player != null && player != this && player.IsDowned) { BeginInteraction(player.NetworkObject, ContextInteraction.RevivePlayer); return; }
             if (player == this) return;
             var enemy = hit.collider.GetComponentInParent<EnemyBrain>();
-            if (enemy != null) { BeginInteraction(enemy.NetworkObject, ContextInteraction.AttackEnemy); return; }
+            if (IsShiftHeld())
+            {
+                StopForForcedAttack(hit.point);
+                if (enemy != null) heroSkills?.TryUseSelectedOnTarget(enemy.NetworkObject);
+                else heroSkills?.TryUseSelectedInPlace(hit.point);
+                return;
+            }
+            if (enemy != null)
+            {
+                BeginInteraction(enemy.NetworkObject, ContextInteraction.AttackEnemy);
+                return;
+            }
             var dummy = hit.collider.GetComponentInParent<CoreDebugDummy>();
             if (dummy != null) { BeginInteraction(dummy.NetworkObject, ContextInteraction.AttackEnemy); return; }
             var resource = hit.collider.GetComponentInParent<CoreDebugResourceNode>();
@@ -276,6 +338,12 @@ namespace CoreKeepers
             }
             var now = NetworkManager.ServerTime.Time;
             if (now < nextInteractionAt) return;
+            if (interaction == ContextInteraction.AttackEnemy && heroSkills != null)
+            {
+                nextInteractionAt = now + 0.08d;
+                heroSkills.TryUseSelectedOnTarget(interactionTarget);
+                return;
+            }
             nextInteractionAt = now + GetCooldown(interaction);
             PerformContextInteractionRpc(new NetworkObjectReference(interactionTarget), interaction);
             if (interaction == ContextInteraction.DepositResources) ClearInteraction();
@@ -302,14 +370,29 @@ namespace CoreKeepers
         }
         private float GetRange(ContextInteraction type) => type switch
         {
-            ContextInteraction.AttackEnemy => attackRange,
+            ContextInteraction.AttackEnemy => heroSkills != null ? Mathf.Max(0.5f, heroSkills.SelectedUseRange) : attackRange,
             ContextInteraction.MineResource => mineRange,
             ContextInteraction.BuildOrRepair => buildRange,
             _ => interactionRange
         };
-        private float GetCooldown(ContextInteraction type) => type switch
-        { ContextInteraction.AttackEnemy => attackCooldown, ContextInteraction.MineResource => mineDuration,
-            ContextInteraction.BuildOrRepair => buildDuration, _ => depositDuration };
+        private float GetCooldown(ContextInteraction type)
+        {
+            var passiveMultiplier = heroSkills == null ? 1f : type switch
+            {
+                ContextInteraction.MineResource => 1f / Mathf.Max(0.01f, heroSkills.MiningSpeedMultiplier),
+                ContextInteraction.BuildOrRepair => 1f / Mathf.Max(0.01f, heroSkills.BuildSpeedMultiplier),
+                _ => 1f
+            };
+            if (NetworkManager != null && NetworkManager.ServerTime.Time < workSpeedEndsAt)
+                passiveMultiplier /= Mathf.Max(0.01f, workSpeedMultiplier);
+            return type switch
+            {
+                ContextInteraction.AttackEnemy => attackCooldown,
+                ContextInteraction.MineResource => mineDuration * passiveMultiplier,
+                ContextInteraction.BuildOrRepair => buildDuration * passiveMultiplier,
+                _ => depositDuration
+            };
+        }
 
         private void ClearInteraction()
         {
@@ -356,6 +439,8 @@ namespace CoreKeepers
                         new NetworkObjectReference(NetworkObject));
                     if (mined > 0)
                     {
+                        if (heroSkills != null && heroSkills.HasProspector && Random.value < 0.25f)
+                            mined++;
                         if (node.ResourceKind == MinedResourceKind.Ore)
                             carriedOre.Value += mined;
                         else
@@ -364,7 +449,12 @@ namespace CoreKeepers
                     break;
                 case ContextInteraction.BuildOrRepair:
                     var building = target.GetComponent<CoreBuilding>(); if (building == null) return;
-                    BeginServerAction(WarriorAction.Build, buildDuration); building.BuildOrRepair(constructionPower); break;
+                    BeginServerAction(WarriorAction.Build, buildDuration);
+                    var repairMultiplier = heroSkills != null ? heroSkills.RepairSpeedMultiplier : 1f;
+                    if (NetworkManager.ServerTime.Time < workSpeedEndsAt) repairMultiplier *= workSpeedMultiplier;
+                    building.BuildOrRepair(Mathf.RoundToInt(constructionPower * repairMultiplier));
+                    if (heroSkills != null && heroSkills.HasPassive(208)) building.ApplyMaximumHealthBonus(1.25f);
+                    break;
                 case ContextInteraction.DepositResources:
                     var core = target.GetComponent<CoreDebugDeposit>(); if (core == null || CarriedResources <= 0) return;
                     BeginServerAction(WarriorAction.Deposit, depositDuration);
@@ -388,6 +478,107 @@ namespace CoreKeepers
                 actionVariant.Value = 0;
             }
             action.Value = requested; actionStartedAt.Value = now; actionEndsAt.Value = now + duration;
+        }
+
+        public void ServerPlaySkillAction(WarriorAction requested, float duration)
+        {
+            if (!IsServer || duration <= 0f) return;
+            BeginServerAction(requested, duration);
+        }
+
+        public bool ServerBeginLeap(Vector3 destination, float duration)
+        {
+            if (!IsServer || downed.Value || duration <= 0f) return false;
+            if (!NavMesh.SamplePosition(destination, out var sample, 2f, NavMesh.AllAreas)) return false;
+            leapStart.Value = transform.position;
+            leapEnd.Value = sample.position;
+            BeginServerAction(WarriorAction.BattleCharge, duration);
+            return true;
+        }
+
+        private void UpdateSpecialMovement()
+        {
+            if (action.Value == WarriorAction.Whirlwind)
+            {
+                if (!whirlwindMovementActive)
+                {
+                    whirlwindMovementActive = true;
+                    whirlwindStartRotation = transform.rotation;
+                }
+                if (agent != null && agent.enabled) agent.updateRotation = false;
+                transform.rotation = Quaternion.AngleAxis(ActionProgress * 360f * WhirlwindTurns, Vector3.up) * whirlwindStartRotation;
+                return;
+            }
+
+            if (whirlwindMovementActive)
+            {
+                whirlwindMovementActive = false;
+                if (agent != null && agent.enabled) agent.updateRotation = true;
+            }
+
+            if (action.Value != WarriorAction.BattleCharge)
+            {
+                if (leapMovementActive) FinishLocalLeap(leapEnd.Value);
+                if (agent != null && agent.enabled)
+                {
+                    agent.updateRotation = true;
+                    if (action.Value == WarriorAction.Earthshatter && agent.isOnNavMesh)
+                        agent.ResetPath();
+                }
+                return;
+            }
+
+            if (!leapMovementActive)
+            {
+                leapMovementActive = true;
+                if (agent != null && agent.enabled)
+                {
+                    if (agent.isOnNavMesh) agent.ResetPath();
+                    agent.enabled = false;
+                }
+            }
+            var t = Mathf.Clamp01(ActionProgress);
+            var position = Vector3.Lerp(leapStart.Value, leapEnd.Value, t);
+            position.y += Mathf.Sin(t * Mathf.PI) * 2.1f;
+            transform.position = position;
+            var direction = leapEnd.Value - leapStart.Value;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.LookRotation(direction.normalized);
+        }
+
+        [Rpc(SendTo.Owner)]
+        private void FinishLeapRpc(Vector3 destination) => FinishLocalLeap(destination);
+
+        private void FinishLocalLeap(Vector3 destination)
+        {
+            leapMovementActive = false;
+            transform.position = destination;
+            if (agent == null) return;
+            agent.enabled = true;
+            EnsureAgentOnNavMesh(destination);
+            if (agent.isOnNavMesh)
+            {
+                agent.Warp(destination);
+                agent.ResetPath();
+            }
+            agent.updateRotation = true;
+        }
+
+        private void StopForForcedAttack(Vector3 targetPosition)
+        {
+            ClearInteraction();
+            if (agent != null && agent.enabled && agent.isOnNavMesh) agent.ResetPath();
+            var direction = targetPosition - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.LookRotation(direction.normalized);
+        }
+
+        private static bool IsShiftHeld()
+        {
+            var keyboard = Keyboard.current;
+            return keyboard != null && (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed);
         }
 
         public NetworkWarrior FindNearestDownedHero(float range)
@@ -480,11 +671,135 @@ namespace CoreKeepers
         public void TakeDamage(float amount)
         {
             if (!IsServer || downed.Value || amount <= 0f) return;
+            amount = heroSkills != null ? heroSkills.ModifyIncomingDamage(amount) : amount;
+            if (amount <= 0f) return;
             damageRevision++;
             CancelResurrectionChannel();
             currentHealth.Value = Mathf.Max(0f, currentHealth.Value - amount);
+            if (currentHealth.Value <= 0f && heroSkills != null && heroSkills.TryPreventLethalDamage())
+                return;
             if (currentHealth.Value <= 0f)
                 EnterDownedState();
+        }
+
+        public void ServerHeal(float amount)
+        {
+            if (!IsServer || downed.Value || amount <= 0f) return;
+            currentHealth.Value = Mathf.Min(maximumHealth.Value, currentHealth.Value + amount);
+        }
+
+        public void ServerSetHealth(float amount)
+        {
+            if (!IsServer) return;
+            currentHealth.Value = Mathf.Clamp(amount, 0f, maximumHealth.Value);
+        }
+
+        public void ServerMultiplyMaximumHealth(float multiplier)
+        {
+            if (!IsServer || multiplier <= 0f) return;
+            var previous = maximumHealth.Value;
+            maximumHealth.Value = Mathf.Max(1f, maximumHealth.Value * multiplier);
+            currentHealth.Value = Mathf.Clamp(currentHealth.Value * maximumHealth.Value / Mathf.Max(1f, previous),
+                1f, maximumHealth.Value);
+        }
+
+        public void ServerWarp(Vector3 position)
+        {
+            if (!IsServer) return;
+            transform.position = position;
+            if (agent != null && agent.enabled && agent.isOnNavMesh) agent.Warp(position);
+        }
+
+        public void ServerFace(Vector3 point)
+        {
+            if (!IsServer) return;
+            var direction = point - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.LookRotation(direction.normalized);
+        }
+
+        public void ServerGrantStatusProtection(float duration)
+        {
+            if (!IsServer) return;
+            statusProtectionEndsAt = System.Math.Max(statusProtectionEndsAt, NetworkManager.ServerTime.Time + duration);
+        }
+
+        public bool HasStatusProtection => IsServer && NetworkManager != null &&
+            NetworkManager.ServerTime.Time < statusProtectionEndsAt;
+        public float OutgoingDamageMultiplier => NetworkManager != null &&
+            NetworkManager.ServerTime.Time < externalDamageBonusEndsAt ? externalDamageMultiplier : 1f;
+        public float ExternalDamageResistance => NetworkManager != null &&
+            NetworkManager.ServerTime.Time < externalResistanceEndsAt ? externalResistance : 0f;
+
+        public void ServerGrantWorkSpeed(float multiplier, float duration)
+        {
+            if (!IsServer) return;
+            workSpeedMultiplier = Mathf.Max(workSpeedMultiplier, multiplier);
+            workSpeedEndsAt = System.Math.Max(workSpeedEndsAt, NetworkManager.ServerTime.Time + duration);
+        }
+
+        public void ServerGrantDamageBonus(float multiplier, float duration)
+        {
+            if (!IsServer) return;
+            externalDamageMultiplier = Mathf.Max(externalDamageMultiplier, multiplier);
+            externalDamageBonusEndsAt = System.Math.Max(externalDamageBonusEndsAt,
+                NetworkManager.ServerTime.Time + duration);
+        }
+
+        public void ServerGrantDamageResistance(float resistance, float duration)
+        {
+            if (!IsServer) return;
+            externalResistance = Mathf.Max(externalResistance, Mathf.Clamp01(resistance));
+            externalResistanceEndsAt = System.Math.Max(externalResistanceEndsAt,
+                NetworkManager.ServerTime.Time + duration);
+        }
+
+        public void ServerRevive(float healthFraction)
+        {
+            if (!IsServer || !downed.Value) return;
+            downed.Value = false;
+            currentHealth.Value = maximumHealth.Value * Mathf.Clamp01(healthFraction);
+            ClearResurrectionState();
+        }
+
+        public void RequestSkillChoice(int stableId, int wave)
+        {
+            if (IsOwner) ChooseSkillRpc(stableId, wave);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void ChooseSkillRpc(int stableId, int wave)
+        {
+            heroSkills?.ServerChoose(HeroSkillCatalog.Find(stableId), wave);
+        }
+
+        public void RequestSkillUse(int stableId, Vector3 point, NetworkObject target)
+        {
+            if (!IsOwner) return;
+            UseSkillRpc(stableId, point, target != null, target != null
+                ? new NetworkObjectReference(target) : default);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void UseSkillRpc(int stableId, Vector3 point, bool hasTarget, NetworkObjectReference targetReference)
+        {
+            NetworkObject target = null;
+            if (hasTarget && !targetReference.TryGet(out target))
+            {
+                ResolveSkillUseRpc(stableId, false, 0f);
+                return;
+            }
+            var cooldown = 0f;
+            var succeeded = heroSkills != null && heroSkills.ServerTryExecute(HeroSkillCatalog.Find(stableId),
+                point, target, out cooldown);
+            ResolveSkillUseRpc(stableId, succeeded, succeeded ? cooldown : 0f);
+        }
+
+        [Rpc(SendTo.Owner)]
+        private void ResolveSkillUseRpc(int stableId, bool succeeded, float cooldown)
+        {
+            heroSkills?.ResolveUseResult(stableId, succeeded, cooldown);
         }
 
         private void EnterDownedState()

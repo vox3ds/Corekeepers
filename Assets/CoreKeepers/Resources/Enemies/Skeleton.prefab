@@ -260,8 +260,9 @@ MonoBehaviour:
   canPassThroughBarricades: 0
   assassin: 0
   coreOnly: 0
+  enemyType: 1
   maximumHealth: 100
-  damage: 10
+  damage: 3
   attackRange: 1.4
   attackDuration: 0.55
   attackCooldown: 1.1

@@ -699,6 +699,7 @@ GameObject:
   - component: {fileID: 4286600881438962394}
   - component: {fileID: 8290210935015875598}
   - component: {fileID: 6017067057884195417}
+  - component: {fileID: 7992858912083723785}
   m_Layer: 0
   m_Name: CoreBuilder
   m_TagString: Untagged
@@ -849,10 +850,14 @@ MonoBehaviour:
   mineRange: 1.7
   buildRange: 1.5
   depositDuration: 0.65
-  reviveDuration: 0.8
+  resurrectionDuration: 10
+  healerResurrectionDuration: 5
+  revivedHealthFraction: 0.3
+  resurrectionMoveTolerance: 0.15
   interactionRange: 3
   constructionPower: 15
-  revivePower: 25
+  startingLevel: 1
+  configuredMaximumHealth: 110
 --- !u!114 &8290210935015875598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -899,6 +904,18 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &7992858912083723785
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7797927624118883843}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85d82219c52248bab343f6f01c12ce51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.HeroSkillController
 --- !u!1 &8221570224746640160
 GameObject:
   m_ObjectHideFlags: 0

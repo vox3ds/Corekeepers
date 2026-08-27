@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a64774a470746618e3f20b8145ad5fe, type: 3}
+  m_Name: 208_reinforced_masonry
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.HeroSkillDefinition
+  stableId: 208
+  displayName: Reinforced Masonry
+  heroClass: 2
+  skillType: 2
+  unlockWave: 4
+  cooldown: 0
+  icon64: {fileID: 21300000, guid: 55c6d3007706d8f47b42ddf93957e7bb, type: 3}
+  icon256: {fileID: 21300000, guid: 35de0856f37736f4d8b007a48154f640, type: 3}
+  description: "Reinforced Masonry \u2014 Passive skill unlocked at wave 4. Values
+    are editable in this asset."
+  targeting: 1
+  effect: 0
+  debuff: 0
+  power: 0.25
+  radius: 0
+  duration: 0
+  secondaryValue: 0
+  count: 1

@@ -4,6 +4,8 @@ using UnityEngine.AI;
 
 namespace CoreKeepers
 {
+    public enum CoreEnemyType : byte { Normal, Undead }
+
     public enum EnemyAnimationState : byte
     {
         Idle,
@@ -51,6 +53,7 @@ namespace CoreKeepers
         [SerializeField] private bool coreOnly;
 
         [Header("Combat")]
+        [SerializeField] private CoreEnemyType enemyType;
         [SerializeField, Min(1f)] private float maximumHealth = 100f;
         [SerializeField, Min(0f)] private float damage = 10f;
         [SerializeField, Min(0.1f)] private float attackRange = 1.4f;
@@ -119,9 +122,14 @@ namespace CoreKeepers
         private bool exploded;
         private bool bypassingBarricade;
         private double barricadeBypassEndsAt;
+        private ulong arcaneExposureOwner = ulong.MaxValue;
+        private double arcaneExposureEndsAt;
+        private float arcaneExposureBonus;
+        private NetworkWarrior elementalStatusSource;
 
         public float Health => health.Value;
         public float MaximumHealth => maximumHealth;
+        public CoreEnemyType EnemyType => enemyType;
         public bool IsAlive => health.Value > 0f;
         public bool CanPassThroughBarricades => canPassThroughBarricades;
         public bool IsAssassin => assassin;
@@ -495,13 +503,20 @@ namespace CoreKeepers
             currentTarget.GetComponent<CoreDebugDeposit>()?.Damage(damage);
         }
 
-        public void TakeDamage(float amount, NetworkWarrior attacker = null)
+        public void TakeDamage(float amount, NetworkWarrior attacker = null, bool activeSkill = false,
+            bool suppressDeathTrigger = false)
         {
             if (!IsServer || !IsAlive || amount <= 0f)
                 return;
+            if (attacker != null && attacker.OwnerClientId != arcaneExposureOwner &&
+                NetworkManager.ServerTime.Time < arcaneExposureEndsAt)
+                amount *= 1f + arcaneExposureBonus;
             health.Value = Mathf.Max(0f, health.Value - amount);
             if (health.Value <= 0f)
             {
+                if (!suppressDeathTrigger && elementalStatusSource != null &&
+                    (debuffs.Value & (EnemyDebuff.OnFire | EnemyDebuff.Freeze | EnemyDebuff.Chill)) != 0)
+                    elementalStatusSource.GetComponent<HeroSkillController>()?.ServerElementalDetonation(transform.position);
                 debuffs.Value = EnemyDebuff.None;
                 var shards = Random.Range(Mathf.Min(coreShardsDropMin, coreShardsDropMax),
                     Mathf.Max(coreShardsDropMin, coreShardsDropMax) + 1);
@@ -528,6 +543,32 @@ namespace CoreKeepers
             ForceHero(hero, duration > 0f ? duration : tauntDuration, true);
         }
 
+        public void ApplyArcaneExposure(ulong mageOwner, float duration, float bonus)
+        {
+            if (!IsServer || !IsAlive) return;
+            arcaneExposureOwner = mageOwner;
+            arcaneExposureBonus = Mathf.Max(arcaneExposureBonus, bonus);
+            arcaneExposureEndsAt = NetworkManager.ServerTime.Time + duration;
+        }
+
+        public void ApplyImpulse(Vector3 impulse)
+        {
+            if (!IsServer || !IsAlive) return;
+            var destination = transform.position + new Vector3(impulse.x, 0f, impulse.z);
+            if (NavMesh.SamplePosition(destination, out var hit, 2f, NavMesh.AllAreas))
+            {
+                if (agent != null && agent.enabled && agent.isOnNavMesh) agent.Warp(hit.position);
+                else transform.position = hit.position;
+            }
+        }
+
+        public void PullToward(Vector3 center, float distance)
+        {
+            var offset = center - transform.position; offset.y = 0f;
+            if (offset.sqrMagnitude < 0.01f) return;
+            ApplyImpulse(offset.normalized * Mathf.Min(distance, offset.magnitude));
+        }
+
         private void ForceHero(NetworkWarrior hero, float duration, bool taunt)
         {
             forcedHero = hero;
@@ -536,7 +577,7 @@ namespace CoreKeepers
             SetTarget(hero.NetworkObject);
         }
 
-        public bool ApplyDebuff(EnemyDebuff debuff, float duration = -1f)
+        public bool ApplyDebuff(EnemyDebuff debuff, float duration = -1f, NetworkWarrior source = null)
         {
             if (!IsServer || !IsAlive || debuff == EnemyDebuff.None || IsResistant(debuff))
                 return false;
@@ -545,6 +586,8 @@ namespace CoreKeepers
                 return false;
             var effectiveDuration = duration > 0f ? duration : DefaultDuration(debuff);
             debuffs.Value |= debuff;
+            if (source != null && (debuff & (EnemyDebuff.OnFire | EnemyDebuff.Freeze | EnemyDebuff.Chill)) != 0)
+                elementalStatusSource = source;
             debuffEndsAt[index] = NetworkManager.ServerTime.Time + effectiveDuration;
             if (debuff == EnemyDebuff.OnFire)
             {

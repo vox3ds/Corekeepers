@@ -18,23 +18,31 @@ MonoBehaviour:
     waves:
     - enemies:
       - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
-        amount: 15
+        amount: 1
     - enemies:
       - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
-        amount: 20
+        amount: 1
       - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
-        amount: 5
+        amount: 1
     - enemies:
       - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
-        amount: 10
+        amount: 1
       - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
-        amount: 15
+        amount: 1
       - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
-        amount: 3
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 1
   - displayName: Mission 2
     hasBoss: 0
     waves:

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a64774a470746618e3f20b8145ad5fe, type: 3}
+  m_Name: 306_sanctified_ward
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.HeroSkillDefinition
+  stableId: 306
+  displayName: Sanctified Ward
+  heroClass: 3
+  skillType: 1
+  unlockWave: 3
+  cooldown: 20
+  icon64: {fileID: 21300000, guid: ebfd3028ab18e0448a37d4143d8b1031, type: 3}
+  icon256: {fileID: 21300000, guid: 43bca3d733cb4ca4f8bf0650687942fc, type: 3}
+  description: "Sanctified Ward \u2014 Active skill unlocked at wave 3. Values are
+    editable in this asset."
+  targeting: 1
+  effect: 19
+  debuff: 0
+  power: 0
+  radius: 6
+  duration: 8
+  secondaryValue: 0
+  count: 1

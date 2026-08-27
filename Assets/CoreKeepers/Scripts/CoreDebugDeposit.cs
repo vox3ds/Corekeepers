@@ -15,6 +15,8 @@ namespace CoreKeepers
         private readonly NetworkVariable<byte> branch = new(0);
         private readonly NetworkVariable<float> currentHealth = new(1000f);
         private readonly NetworkVariable<float> maximumHealth = new(1000f);
+        private float damageResistance;
+        private double damageResistanceEndsAt;
         public static CoreDebugDeposit Instance { get; private set; }
         public int DepositedResources => depositedOre.Value + depositedCoreShards.Value;
         public int DepositedOre => depositedOre.Value;
@@ -86,7 +88,23 @@ namespace CoreKeepers
         {
             if (!IsServer || amount <= 0f || currentHealth.Value <= 0f)
                 return;
+            if (NetworkManager.ServerTime.Time >= damageResistanceEndsAt) damageResistance = 0f;
+            amount *= 1f - Mathf.Clamp01(damageResistance);
             currentHealth.Value = Mathf.Max(0f, currentHealth.Value - amount);
+        }
+
+        public void Heal(float amount)
+        {
+            if (!IsServer || amount <= 0f || currentHealth.Value <= 0f) return;
+            currentHealth.Value = Mathf.Min(maximumHealth.Value, currentHealth.Value + amount);
+        }
+
+        public void ApplyDamageResistance(float resistance, float duration)
+        {
+            if (!IsServer || duration <= 0f) return;
+            damageResistance = Mathf.Max(damageResistance, Mathf.Clamp01(resistance));
+            damageResistanceEndsAt = System.Math.Max(damageResistanceEndsAt,
+                NetworkManager.ServerTime.Time + duration);
         }
 
         private void Update()

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a64774a470746618e3f20b8145ad5fe, type: 3}
+  m_Name: 301_light_bolt
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.HeroSkillDefinition
+  stableId: 301
+  displayName: Light Bolt
+  heroClass: 3
+  skillType: 0
+  unlockWave: 0
+  cooldown: 1.4
+  icon64: {fileID: 21300000, guid: 80419a3019f911c4696c5277e3bca9a7, type: 3}
+  icon256: {fileID: 21300000, guid: ea81cb6bd4c593a4f828c8d4599e1a8d, type: 3}
+  description: "Light Bolt \u2014 Basic skill unlocked at wave 0. Values are editable
+    in this asset."
+  targeting: 0
+  effect: 7
+  debuff: 0
+  power: 25
+  radius: 16
+  duration: 0
+  secondaryValue: 0
+  count: 1

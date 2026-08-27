@@ -28,6 +28,7 @@ namespace CoreKeepers
         private Transform leftHand;
         private Transform rightHand;
         private Transform sword;
+        private Transform shield;
         private Transform hammer;
         private Transform pickaxe;
         private TrailRenderer swordTrail;
@@ -35,6 +36,7 @@ namespace CoreKeepers
         private Vector3 headPosition;
         private Vector3 leftPosition;
         private Vector3 rightPosition;
+        private Vector3 rightScale;
         private Quaternion headRotation;
         private Quaternion leftRotation;
         private Quaternion rightRotation;
@@ -45,6 +47,8 @@ namespace CoreKeepers
         private float idlePhase;
         private float downedBlend;
         private bool ready;
+        private WarriorAction previousAction;
+        private bool impactVisualTriggered;
 
         public string DisplayState => warrior == null ? "Unknown" : warrior.IsDowned ? "Downed" : warrior.CurrentAction != WarriorAction.None
             ? warrior.CurrentAction.ToString()
@@ -62,6 +66,7 @@ namespace CoreKeepers
             leftHand = FindDeepChild(transform, "LHand");
             rightHand = FindDeepChild(transform, "RHand");
             sword = FindDeepChild(transform, "SwordPlaceholder");
+            shield = FindDeepChild(transform, "ShieldPlaceholder");
             hammer = FindDeepChild(transform, "HammerPlaceholder");
             pickaxe = FindDeepChild(transform, "PickaxePlaceholder");
             CreateSwordTrail();
@@ -73,6 +78,7 @@ namespace CoreKeepers
             headPosition = head.localPosition;
             leftPosition = leftHand.localPosition;
             rightPosition = rightHand.localPosition;
+            rightScale = rightHand.localScale;
             headRotation = head.localRotation;
             leftRotation = leftHand.localRotation;
             rightRotation = rightHand.localRotation;
@@ -94,6 +100,11 @@ namespace CoreKeepers
             if (swordTrail != null)
                 swordTrail.emitting = false;
             UpdateLocomotionBlend();
+            if (warrior.CurrentAction != previousAction)
+            {
+                previousAction = warrior.CurrentAction;
+                impactVisualTriggered = false;
+            }
             downedBlend = Mathf.MoveTowards(downedBlend, warrior.IsDowned ? 1f : 0f, Time.deltaTime * 3.5f);
             if (downedBlend > 0f)
             {
@@ -111,6 +122,7 @@ namespace CoreKeepers
             head.localPosition = headPosition;
             leftHand.localPosition = leftPosition;
             rightHand.localPosition = rightPosition;
+            rightHand.localScale = rightScale;
             head.localRotation = headRotation;
             leftHand.localRotation = leftRotation;
             rightHand.localRotation = rightRotation;
@@ -175,6 +187,96 @@ namespace CoreKeepers
                     rightHand.localRotation = rightRotation * Quaternion.Euler(-55f, 0f, 18f);
                     head.localPosition += Vector3.down * 0.05f;
                     break;
+                case WarriorAction.Whirlwind:
+                    AnimateWhirlwind(t);
+                    break;
+                case WarriorAction.ShieldBash:
+                    AnimateShieldBash(t);
+                    break;
+                case WarriorAction.BattleCharge:
+                    AnimateBattleCharge(t);
+                    break;
+                case WarriorAction.Earthshatter:
+                    AnimateEarthshatter(t);
+                    break;
+            }
+        }
+
+        private void AnimateWhirlwind(float t)
+        {
+            rightHand.localPosition = new Vector3(0.1f, 0.33f, 0.5f);
+            rightHand.localRotation = Quaternion.Euler(180f, 180f, -90f);
+            rightHand.localScale = Vector3.one;
+            leftHand.localPosition += new Vector3(0.04f, 0.12f, 0.28f);
+            leftHand.localRotation = leftRotation * Quaternion.Euler(-22f, 48f, -34f);
+            head.localPosition += Vector3.up * (0.04f + Mathf.Sin(t * Mathf.PI * 20f) * 0.025f);
+            if (swordTrail != null) swordTrail.emitting = t > 0.015f && t < 0.99f;
+        }
+
+        private void AnimateShieldBash(float t)
+        {
+            var windup = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.28f));
+            var bash = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.28f) / 0.24f));
+            var recover = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.68f) / 0.32f));
+            var guardedPosition = new Vector3(0.28f, 0.2f, 0.28f);
+            var bashPosition = new Vector3(0.05f, 0.12f, 0.72f);
+            var offset = Vector3.Lerp(Vector3.zero, guardedPosition, windup);
+            offset = Vector3.Lerp(offset, bashPosition, bash);
+            leftHand.localPosition += Vector3.Lerp(offset, Vector3.zero, recover);
+            var guardedRotation = Quaternion.Euler(-72f, 18f, -38f);
+            var bashRotation = Quaternion.Euler(-92f, -4f, -8f);
+            var shieldPose = Quaternion.Slerp(Quaternion.identity, guardedRotation, windup);
+            shieldPose = Quaternion.Slerp(shieldPose, bashRotation, bash);
+            shieldPose = Quaternion.Slerp(shieldPose, Quaternion.identity, recover);
+            leftHand.localRotation = leftRotation * shieldPose;
+            rightHand.localPosition += new Vector3(-0.12f, 0.03f, -0.18f) * windup;
+            rightHand.localRotation = rightRotation * Quaternion.Euler(-25f * windup, 22f * windup, 30f * windup);
+            if (body != null)
+            {
+                body.localRotation = bodyRotation * Quaternion.Euler(-10f * bash, 0f, -7f * bash);
+                body.localPosition = bodyPosition + Vector3.forward * (0.2f * bash);
+            }
+        }
+
+        private void AnimateBattleCharge(float t)
+        {
+            var thrust = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.32f));
+            var recover = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.82f) / 0.18f));
+            rightHand.localPosition += Vector3.Lerp(new Vector3(-0.08f, 0.25f, -0.2f),
+                new Vector3(0f, 0.05f, 0.68f), thrust) * (1f - recover);
+            rightHand.localRotation = rightRotation * Quaternion.Euler(
+                Vector3.Lerp(new Vector3(-80f, -35f, -25f), new Vector3(-8f, 5f, 88f), thrust));
+            leftHand.localPosition += new Vector3(0.08f, 0.18f, 0.34f) * (1f - recover);
+            head.localRotation = headRotation * Quaternion.Euler(14f, 0f, 0f);
+            if (body != null) body.localRotation = bodyRotation * Quaternion.Euler(18f, 0f, 0f);
+            if (swordTrail != null) swordTrail.emitting = t > 0.15f && t < 0.9f;
+        }
+
+        private void AnimateEarthshatter(float t)
+        {
+            var jumpT = Mathf.Clamp01(t / 0.68f);
+            var jumpHeight = Mathf.Sin(jumpT * Mathf.PI) * 1.85f;
+            var windup = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.42f));
+            var slam = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.42f) / 0.26f));
+            var recover = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - 0.76f) / 0.24f));
+            if (body != null)
+            {
+                body.localPosition = bodyPosition + Vector3.up * jumpHeight + Vector3.down * (0.22f * slam * (1f - recover));
+                body.localRotation = bodyRotation * Quaternion.Euler(Mathf.Lerp(-12f, 24f, slam) * (1f - recover), 0f, 0f);
+            }
+            var overhead = new Vector3(-145f, -12f, -18f);
+            var impact = new Vector3(72f, 8f, 18f);
+            var pose = Vector3.Lerp(Vector3.zero, overhead, windup);
+            pose = Vector3.Lerp(pose, impact, slam);
+            pose = Vector3.Lerp(pose, Vector3.zero, recover);
+            rightHand.localRotation = rightRotation * Quaternion.Euler(pose);
+            rightHand.localPosition += Vector3.Lerp(new Vector3(0f, 0.5f, -0.2f),
+                new Vector3(0f, -0.22f, 0.52f), slam) * (1f - recover);
+            if (swordTrail != null) swordTrail.emitting = t > 0.5f && t < 0.74f;
+            if (!impactVisualTriggered && t >= 0.68f)
+            {
+                impactVisualTriggered = true;
+                EarthshatterShockwave.Spawn(transform.position, swordTrailColor, 5f);
             }
         }
 
@@ -284,7 +386,11 @@ namespace CoreKeepers
         private void SetToolVisibility()
         {
             if (sword != null) sword.gameObject.SetActive(!warrior.IsDowned && (warrior.CurrentAction == WarriorAction.None ||
-                warrior.CurrentAction == WarriorAction.Attack));
+                warrior.CurrentAction == WarriorAction.Attack || warrior.CurrentAction == WarriorAction.Whirlwind ||
+                warrior.CurrentAction == WarriorAction.BattleCharge || warrior.CurrentAction == WarriorAction.Earthshatter ||
+                warrior.CurrentAction == WarriorAction.ShieldBash));
+            if (shield != null) shield.gameObject.SetActive(!warrior.IsDowned && warrior.CurrentAction != WarriorAction.Build &&
+                warrior.CurrentAction != WarriorAction.Mine);
             if (hammer != null) hammer.gameObject.SetActive(!warrior.IsDowned && warrior.CurrentAction == WarriorAction.Build);
             if (pickaxe != null) pickaxe.gameObject.SetActive(!warrior.IsDowned && warrior.CurrentAction == WarriorAction.Mine);
         }
@@ -305,7 +411,7 @@ namespace CoreKeepers
             swordTrail.time = swordTrailTime;
             swordTrail.minVertexDistance = 0.025f;
             swordTrail.widthCurve = new AnimationCurve(new Keyframe(0f, swordTrailWidth), new Keyframe(1f, 0f));
-            swordTrail.startColor = swordTrailColor;
+            swordTrail.startColor = swordTrailColor * 1.8f;
             swordTrail.endColor = new Color(swordTrailColor.r, swordTrailColor.g, swordTrailColor.b, 0f);
             swordTrail.textureMode = LineTextureMode.Stretch;
             swordTrail.alignment = LineAlignment.View;
@@ -313,12 +419,20 @@ namespace CoreKeepers
             swordTrail.numCapVertices = 2;
             swordTrail.emitting = false;
 
-            var shader = Shader.Find("Sprites/Default");
-            if (shader == null)
-                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
             if (shader != null)
             {
                 swordTrailMaterial = new Material(shader) { hideFlags = HideFlags.DontSave };
+                var glow = swordTrailColor * 3f;
+                glow.a = swordTrailColor.a;
+                if (swordTrailMaterial.HasProperty("_BaseColor")) swordTrailMaterial.SetColor("_BaseColor", glow);
+                if (swordTrailMaterial.HasProperty("_Color")) swordTrailMaterial.SetColor("_Color", glow);
+                if (swordTrailMaterial.HasProperty("_EmissionColor"))
+                {
+                    swordTrailMaterial.EnableKeyword("_EMISSION");
+                    swordTrailMaterial.SetColor("_EmissionColor", glow);
+                }
                 swordTrail.material = swordTrailMaterial;
             }
         }
@@ -335,6 +449,65 @@ namespace CoreKeepers
                 if (child.name == childName)
                     return child;
             return null;
+        }
+    }
+
+    public sealed class EarthshatterShockwave : MonoBehaviour
+    {
+        private const float Lifetime = 0.55f;
+        private LineRenderer line;
+        private Material material;
+        private Color color;
+        private float maximumRadius;
+        private float age;
+
+        public static void Spawn(Vector3 position, Color requestedColor, float radius)
+        {
+            var effectObject = new GameObject("Earthshatter Shockwave");
+            effectObject.transform.position = position + Vector3.up * 0.08f;
+            var effect = effectObject.AddComponent<EarthshatterShockwave>();
+            effect.Initialize(requestedColor, radius);
+        }
+
+        private void Initialize(Color requestedColor, float radius)
+        {
+            color = requestedColor;
+            maximumRadius = radius;
+            line = gameObject.AddComponent<LineRenderer>();
+            line.loop = true;
+            line.useWorldSpace = false;
+            line.positionCount = 64;
+            line.widthMultiplier = 0.18f;
+            line.numCornerVertices = 2;
+            var shader = Shader.Find("Sprites/Default");
+            if (shader != null)
+            {
+                material = new Material(shader) { hideFlags = HideFlags.DontSave };
+                line.material = material;
+            }
+        }
+
+        private void Update()
+        {
+            age += Time.deltaTime;
+            var t = Mathf.Clamp01(age / Lifetime);
+            var radius = Mathf.Lerp(0.35f, maximumRadius, 1f - (1f - t) * (1f - t));
+            for (var index = 0; index < line.positionCount; index++)
+            {
+                var angle = index * Mathf.PI * 2f / line.positionCount;
+                line.SetPosition(index, new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius));
+            }
+            var faded = color;
+            faded.a *= 1f - t;
+            line.startColor = faded * 1.6f;
+            line.endColor = faded;
+            line.widthMultiplier = Mathf.Lerp(0.24f, 0.03f, t);
+            if (age >= Lifetime) Destroy(gameObject);
+        }
+
+        private void OnDestroy()
+        {
+            if (material != null) Destroy(material);
         }
     }
 }

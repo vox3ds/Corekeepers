@@ -14,6 +14,8 @@ namespace CoreKeepers
         {
             CoreHeroPanel.AttachToScenePanel();
             CoreStatusPanel.AttachToScenePanel();
+            HeroSkillsUI.AttachToPreparedPanel();
+            SkillUpgradePopupUI.AttachToPreparedPopup();
             EnsureNavigation();
 
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)

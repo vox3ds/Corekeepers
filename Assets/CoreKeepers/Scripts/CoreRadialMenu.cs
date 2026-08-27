@@ -78,9 +78,10 @@ namespace CoreKeepers
             if (mouse == null)
                 return;
 
-            if (mouse.rightButton.wasPressedThisFrame && !IsPointerOverUi())
+            var popupBlocksInput = SkillUpgradePopupUI.Instance != null && SkillUpgradePopupUI.Instance.IsOpen;
+            if (mouse.rightButton.wasPressedThisFrame && !GameplayInputGate.IsPointerOverUi && !popupBlocksInput)
                 HandleRightClick(mouse.position.ReadValue());
-            else if (mouse.leftButton.wasPressedThisFrame && IsOpen && !IsPointerOverUi())
+            else if (mouse.leftButton.wasPressedThisFrame && IsOpen && !GameplayInputGate.IsPointerOverUi)
                 CloseAll();
 
             var local = NetworkWarrior.Local;
@@ -282,8 +283,6 @@ namespace CoreKeepers
             upgradeTarget = null;
             coreTarget = null;
         }
-
-        private static bool IsPointerOverUi() => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 
         private static Vector2 ClampToScreen(Vector2 position, float margin)
         {

@@ -68,6 +68,7 @@ namespace CoreKeepers
         private readonly NetworkVariable<double> phaseStartedAt = new(0d);
         private readonly NetworkVariable<double> phaseEndsAt = new(0d);
         private readonly NetworkVariable<bool> bossMission = new(false);
+        private readonly NetworkVariable<int> missionRevision = new(0);
 
         private readonly List<GameObject> releaseQueue = new();
         private readonly List<EnemyBrain> activeEnemies = new();
@@ -79,10 +80,14 @@ namespace CoreKeepers
 
         public CoreWavePhase Phase => phase.Value;
         public int CurrentWaveNumber => currentWave.Value + 1;
+        public int CompletedWaves => completedWaves.Value;
+        public int MissionRevision => missionRevision.Value;
         public int EnemiesRemaining => enemiesRemaining.Value;
+        public static CoreMissionWaveController Instance { get; private set; }
 
         private void Awake()
         {
+            Instance = this;
             BindHudByName();
             FindSpawnZonesWhenEmpty();
             SetHudActive(false);
@@ -108,6 +113,7 @@ namespace CoreKeepers
             if (!IsServer)
                 return;
             ResetRuntimeState();
+            missionRevision.Value++;
             activeMission = missionDatabase != null ? missionDatabase.GetMission(oneBasedMissionNumber) : null;
             if (activeMission == null)
             {
@@ -119,6 +125,12 @@ namespace CoreKeepers
             missionNumber.Value = oneBasedMissionNumber;
             bossMission.Value = activeMission.HasBoss;
             BeginPreparation(0);
+        }
+
+        public override void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+            base.OnDestroy();
         }
 
         private void UpdateServerMission()

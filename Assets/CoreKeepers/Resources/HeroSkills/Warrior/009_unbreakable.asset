@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a64774a470746618e3f20b8145ad5fe, type: 3}
+  m_Name: 009_unbreakable
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.HeroSkillDefinition
+  stableId: 9
+  displayName: Unbreakable
+  heroClass: 0
+  skillType: 2
+  unlockWave: 4
+  cooldown: 0
+  icon64: {fileID: 21300000, guid: cd9ff1e537c7d8446b3ba7af9c479bf4, type: 3}
+  icon256: {fileID: 21300000, guid: 1c9692d2b0ec88342aeca9447b2417d9, type: 3}
+  description: "Unbreakable \u2014 Passive skill unlocked at wave 4. Values are editable
+    in this asset."
+  targeting: 1
+  effect: 0
+  debuff: 0
+  power: 0.4
+  radius: 0
+  duration: 0
+  secondaryValue: 0
+  count: 1

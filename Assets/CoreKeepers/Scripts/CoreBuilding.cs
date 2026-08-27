@@ -2,6 +2,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace CoreKeepers
 {
@@ -43,6 +44,14 @@ namespace CoreKeepers
     [RequireComponent(typeof(NetworkObject))]
     public sealed class CoreBuilding : NetworkBehaviour
     {
+        private struct TimedModifier
+        {
+            public float Damage;
+            public float AttackSpeed;
+            public float Range;
+            public float Resistance;
+            public double EndsAt;
+        }
         [SerializeField] private CoreBuildingType buildingType;
         [SerializeField] private GameObject foundationVisual;
         [SerializeField] private GameObject completedVisual;
@@ -53,10 +62,12 @@ namespace CoreKeepers
         private readonly NetworkVariable<float> health = new(1f);
         private readonly NetworkVariable<byte> level = new(1);
         private readonly NetworkVariable<byte> upgradeBranch = new(0);
+        private readonly NetworkVariable<float> maximumHealthMultiplier = new(1f);
         private readonly GameObject[] buildProgressStages = new GameObject[5];
         private Transform buildProgressRoot;
         private Transform constructionProgressBarRoot;
         private Image constructionProgressBarFill;
+        private readonly Dictionary<ulong, TimedModifier> timedModifiers = new();
         private static readonly string[] BuildProgressNames =
             { "Build0%", "Build20%", "Build40%", "Build60%", "Build80%" };
 
@@ -65,10 +76,14 @@ namespace CoreKeepers
         public int ConstructionPoints => constructionPoints.Value;
         public int RequiredConstructionPoints => CoreBuildingCatalog.RequiredBuildPoints(buildingType);
         public float Health => health.Value;
-        public float MaximumHealth => CoreBuildingCatalog.MaxHealth(buildingType) * (1f + (level.Value - 1) * 0.25f);
+        public float MaximumHealth => CoreBuildingCatalog.MaxHealth(buildingType) *
+            (1f + (level.Value - 1) * 0.25f) * maximumHealthMultiplier.Value;
         public int Level => level.Value;
         public int MaximumLevel => maximumLevel;
         public bool CanUpgrade => state.Value != CoreBuildingState.UnderConstruction && level.Value < maximumLevel;
+        public float DamageMultiplier => Aggregate(modifier => modifier.Damage, 1f);
+        public float AttackSpeedMultiplier => Aggregate(modifier => modifier.AttackSpeed, 1f);
+        public float RangeMultiplier => Aggregate(modifier => modifier.Range, 1f);
         public string StatusLabel => state.Value switch
         {
             CoreBuildingState.UnderConstruction => $"BUILD {constructionPoints.Value}/{RequiredConstructionPoints}",
@@ -99,13 +114,23 @@ namespace CoreKeepers
                 constructionPoints.Value = 0;
                 health.Value = 1f;
                 level.Value = 1;
+                maximumHealthMultiplier.Value = 1f;
             }
             CacheBuildProgressStages();
             CacheConstructionProgressBar();
             RefreshVisuals();
         }
 
-        private void Update() => RefreshVisuals();
+        private void Update()
+        {
+            RefreshVisuals();
+            if (!IsServer || timedModifiers.Count == 0) return;
+            var now = NetworkManager.ServerTime.Time;
+            var expired = new List<ulong>();
+            foreach (var entry in timedModifiers)
+                if (now >= entry.Value.EndsAt) expired.Add(entry.Key);
+            foreach (var source in expired) timedModifiers.Remove(source);
+        }
 
         public void BuildOrRepair(int points)
         {
@@ -132,6 +157,7 @@ namespace CoreKeepers
         {
             if (!IsServer || amount <= 0f)
                 return;
+            amount *= 1f - Mathf.Clamp01(Aggregate(modifier => modifier.Resistance, 0f));
             if (state.Value == CoreBuildingState.UnderConstruction)
             {
                 NetworkObject.Despawn(true);
@@ -142,6 +168,36 @@ namespace CoreKeepers
                 NetworkObject.Despawn(true);
             else
                 state.Value = CoreBuildingState.Damaged;
+        }
+
+        public void ApplyTimedModifiers(ulong sourceId, float damageMultiplier, float attackSpeedMultiplier,
+            float rangeMultiplier, float resistance, float duration)
+        {
+            if (!IsServer || duration <= 0f) return;
+            timedModifiers[sourceId] = new TimedModifier
+            {
+                Damage = Mathf.Max(1f, damageMultiplier),
+                AttackSpeed = Mathf.Max(1f, attackSpeedMultiplier),
+                Range = Mathf.Max(1f, rangeMultiplier),
+                Resistance = Mathf.Clamp01(resistance),
+                EndsAt = NetworkManager.ServerTime.Time + duration
+            };
+        }
+
+        public void ApplyMaximumHealthBonus(float multiplier)
+        {
+            if (!IsServer || multiplier <= maximumHealthMultiplier.Value) return;
+            var previousMaximum = MaximumHealth;
+            maximumHealthMultiplier.Value = multiplier;
+            health.Value = Mathf.Min(MaximumHealth, health.Value + MaximumHealth - previousMaximum);
+        }
+
+        private float Aggregate(System.Func<TimedModifier, float> selector, float initial)
+        {
+            var value = initial;
+            foreach (var modifier in timedModifiers.Values)
+                value = Mathf.Max(value, selector(modifier));
+            return value;
         }
 
         public bool TryUpgrade(byte branch)
