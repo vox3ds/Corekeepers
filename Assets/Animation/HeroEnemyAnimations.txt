@@ -1,0 +1,34 @@
+0-15 AttackRHand
+15-30 AttackLHand
+30-50 Smash
+50-65 ShieldSmash
+65-80 CastProjectileLHand
+80-95 CastProjectileRHand
+95-115 CastSpellUp
+115-135 CastSpellAround
+135-140 TwirilStart
+140-150 TwirilLoop
+150-155 TwirilEnd
+155-160 DeadStart
+160-170 DeadLoop
+170-175 Resurected
+175-210 ThrowRock
+210-218 Hit
+218-232 ReviveStart
+232-250 ReviveLoop
+250-260 ReviveEnd
+260-277 Mine
+277-291 Build
+291-310 Deposit
+310-360 Idle
+360-366 RunStart
+366-378 RunLoop
+378-385 RunStop
+385-390 WalkStart
+390-420 WalkLoop
+420-425 WalkStop
+425-500 Float
+500-515 HeadAttack
+
+
+

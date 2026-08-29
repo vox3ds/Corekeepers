@@ -89,6 +89,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: eb5c1ae82edb7304d8929c42721e92c7, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4978528267585910482}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: eb5c1ae82edb7304d8929c42721e92c7, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8439622533702897505}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: eb5c1ae82edb7304d8929c42721e92c7, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2174468945743802635}
   m_SourcePrefab: {fileID: 100100000, guid: eb5c1ae82edb7304d8929c42721e92c7, type: 3}
 --- !u!1 &4248360952053328476 stripped
 GameObject:
@@ -301,6 +307,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.EnemyProceduralAnimator
   attackPreset: 1
   movementPreset: 1
+  useImportedAnimation: 1
   projectilePrefab: {fileID: 0}
   projectileReleaseTime: 0.55
   walkFrequency: 7
@@ -332,3 +339,102 @@ MonoBehaviour:
   trailLifetime: 0.22
   trailHandOffset: {x: 0, y: 0, z: 0.38}
   trailHeadOffset: {x: 0, y: 0, z: 0.45}
+--- !u!95 &8439622533702897505
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4248360952053328476}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 0}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &2174468945743802635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4248360952053328476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11ca27ff7ce6e4143b84bf2483667c2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.SharedCharacterClipAnimator
+  targetAnimator: {fileID: 8439622533702897505}
+  clips:
+  - name: AttackRHand
+    clip: {fileID: -3056423348698618766, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: AttackLHand
+    clip: {fileID: -8611618291133275677, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: Smash
+    clip: {fileID: 1452395112514428799, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: ShieldSmash
+    clip: {fileID: -8624401846895562819, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: CastProjectileLHand
+    clip: {fileID: 2994427436467732735, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: CastProjectileRHand
+    clip: {fileID: 2187208630894264312, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: CastSpellUp
+    clip: {fileID: -3629195206055149155, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: CastSpellAround
+    clip: {fileID: -530931537363330651, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: TwirilStart
+    clip: {fileID: -6835861393858250042, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: TwirilLoop
+    clip: {fileID: 6289692654182566259, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: TwirilEnd
+    clip: {fileID: 1344102909202893484, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: DeadStart
+    clip: {fileID: 5985781878214916740, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: DeadLoop
+    clip: {fileID: 7066216446852744984, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: Resurected
+    clip: {fileID: -413281246798885424, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: ThrowRock
+    clip: {fileID: 3302943486281385108, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: Hit
+    clip: {fileID: 5013324155036275096, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: ReviveStart
+    clip: {fileID: 4513273214728373545, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: ReviveLoop
+    clip: {fileID: -816634809991393768, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: ReviveEnd
+    clip: {fileID: 6979855348856744972, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: Mine
+    clip: {fileID: 2931716442639785096, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: Build
+    clip: {fileID: -313237351457897004, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: Deposit
+    clip: {fileID: -4396027566494891347, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: Idle
+    clip: {fileID: -4419265953858823711, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: RunStart
+    clip: {fileID: 3265674173218301585, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: RunLoop
+    clip: {fileID: -8600003604839729986, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: RunStop
+    clip: {fileID: 3026288425328454451, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: WalkStart
+    clip: {fileID: 6660998330566220192, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: WalkLoop
+    clip: {fileID: 6979583012377757719, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: WalkStop
+    clip: {fileID: 6502359186689995411, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: Float
+    clip: {fileID: -21985403918696795, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  - name: HeadAttack
+    clip: {fileID: 1513507885009415008, guid: edc0fbcc805ce0c4ba77b2dc22eaab63, type: 2}
+  blendDuration: 0.08

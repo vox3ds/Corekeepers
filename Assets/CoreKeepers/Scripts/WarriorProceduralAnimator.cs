@@ -17,6 +17,7 @@ namespace CoreKeepers
         [Header("Actions")]
         [SerializeField] private float attackSwingAngle = 155f;
         [SerializeField] private float toolSwingAngle = 125f;
+        [SerializeField, HideInInspector] private bool useImportedAnimation;
         [Header("Sword Trail")]
         [SerializeField, Min(0.02f)] private float swordTrailTime = 0.16f;
         [SerializeField, Min(0.01f)] private float swordTrailWidth = 0.2f;
@@ -95,16 +96,22 @@ namespace CoreKeepers
             if (!ready)
                 return;
 
-            ResetPose();
             SetToolVisibility();
             if (swordTrail != null)
                 swordTrail.emitting = false;
-            UpdateLocomotionBlend();
             if (warrior.CurrentAction != previousAction)
             {
                 previousAction = warrior.CurrentAction;
                 impactVisualTriggered = false;
             }
+            if (useImportedAnimation)
+            {
+                UpdateImportedAnimationVisuals();
+                return;
+            }
+
+            ResetPose();
+            UpdateLocomotionBlend();
             downedBlend = Mathf.MoveTowards(downedBlend, warrior.IsDowned ? 1f : 0f, Time.deltaTime * 3.5f);
             if (downedBlend > 0f)
             {
@@ -115,6 +122,34 @@ namespace CoreKeepers
                 AnimateAction(warrior.CurrentAction, warrior.ActionProgress);
             else
                 AnimateLocomotion(warrior.NormalizedSpeed);
+        }
+
+        public void ConfigureImportedAnimation(bool enabled)
+        {
+            useImportedAnimation = enabled;
+        }
+
+        private void UpdateImportedAnimationVisuals()
+        {
+            var action = warrior.CurrentAction;
+            var progress = warrior.ActionProgress;
+            if (swordTrail != null)
+            {
+                swordTrail.emitting = !warrior.IsDowned && (action switch
+                {
+                    WarriorAction.Attack => progress >= 0.28f && progress <= 0.78f,
+                    WarriorAction.Whirlwind => progress > 0.015f && progress < 0.99f,
+                    WarriorAction.BattleCharge => progress > 0.15f && progress < 0.9f,
+                    WarriorAction.Earthshatter => progress > 0.5f && progress < 0.74f,
+                    _ => false
+                });
+            }
+
+            if (action == WarriorAction.Earthshatter && !impactVisualTriggered && progress >= 0.68f)
+            {
+                impactVisualTriggered = true;
+                EarthshatterShockwave.Spawn(transform.position, swordTrailColor, 5f);
+            }
         }
 
         private void ResetPose()

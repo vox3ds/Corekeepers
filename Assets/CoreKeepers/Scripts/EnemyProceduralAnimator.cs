@@ -29,6 +29,7 @@ namespace CoreKeepers
         [Header("Animation Presets")]
         [SerializeField] private EnemyAttackAnimationPreset attackPreset = EnemyAttackAnimationPreset.AlternatingMelee;
         [SerializeField] private EnemyMovementAnimationPreset movementPreset = EnemyMovementAnimationPreset.Walk;
+        [SerializeField, HideInInspector] private bool useImportedAnimation;
 
         [Header("Magic Projectile")]
         [SerializeField] private GameObject projectilePrefab;
@@ -102,6 +103,11 @@ namespace CoreKeepers
         public float ProjectileReleaseTime => projectileReleaseTime;
         public bool UsesPhysicsRolling => movementPreset == EnemyMovementAnimationPreset.PhysicsRoll;
 
+        public void ConfigureImportedAnimation(bool enabled)
+        {
+            useImportedAnimation = enabled;
+        }
+
         public EnemyAnimationState GetNextAttackState(ref bool useRightSide)
         {
             switch (attackPreset)
@@ -173,12 +179,53 @@ namespace CoreKeepers
         private void LateUpdate()
         {
             if (!ready) return;
-            ResetPose();
             SetTrailEmission(false, false, false);
             if (heldRock != null) heldRock.SetActive(false);
+            if (useImportedAnimation)
+            {
+                UpdateImportedAnimationVisuals();
+                UpdateStatusVisuals();
+                return;
+            }
+
+            ResetPose();
             phase += Time.deltaTime * walkFrequency;
             AnimateState();
             UpdateStatusVisuals();
+        }
+
+        private void UpdateImportedAnimationVisuals()
+        {
+            var state = enemy.CurrentAnimation;
+            var t = enemy.AnimationProgress;
+            switch (state)
+            {
+                case EnemyAnimationState.Attack_LHand:
+                    SetTrailEmission(IsTrailPhase(t), false);
+                    break;
+                case EnemyAnimationState.Attack_RHand:
+                    SetTrailEmission(false, IsTrailPhase(t));
+                    break;
+                case EnemyAnimationState.Smash:
+                    SetTrailEmission(IsTrailPhase(t), IsTrailPhase(t));
+                    break;
+                case EnemyAnimationState.ThrowRock:
+                    SetTrailEmission(IsTrailPhase(t), IsTrailPhase(t));
+                    if (heldRock != null && t >= 0.16f && t < 0.61f)
+                    {
+                        heldRock.SetActive(true);
+                        var hand = rightHand != null ? rightHand : leftHand;
+                        if (hand != null)
+                        {
+                            heldRock.transform.position = hand.position + hand.forward * 0.22f;
+                            heldRock.transform.rotation = hand.rotation;
+                        }
+                    }
+                    break;
+                case EnemyAnimationState.HeadAttack:
+                    SetTrailEmission(false, false, IsTrailPhase(t));
+                    break;
+            }
         }
 
         private void AnimateState()
