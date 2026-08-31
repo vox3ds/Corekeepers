@@ -6,7 +6,7 @@ namespace CoreKeepers
     [RequireComponent(typeof(CoreBuilding), typeof(Collider))]
     public sealed class CoreTrapPlate : NetworkBehaviour
     {
-        [SerializeField, Min(0f)] private float damage = 35f;
+        [SerializeField, Min(0f)] private float damage = 50f;
         private bool consumed;
         private CoreBuilding building;
 

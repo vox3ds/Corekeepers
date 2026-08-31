@@ -12,7 +12,7 @@ using UnityEngine.AI;
 
 public static class EnemyPrefabSetup
 {
-    private const string SetupVersionKey = "CoreKeepers.EnemyPrefabSetup.v4";
+    private const string SetupVersionKey = "CoreKeepers.EnemyPrefabSetup.v6";
     private const string EnemyDirectory = "Assets/CoreKeepers/Resources/Enemies";
     private const string ProjectileDirectory = "Assets/CoreKeepers/Resources/EnemyProjectiles";
     private const string TrapPath = "Assets/CoreKeepers/Resources/Buildings/TrapPlate.prefab";
@@ -108,6 +108,16 @@ public static class EnemyPrefabSetup
             var brain = AddIfMissing<EnemyBrain>(root);
             var animator = AddIfMissing<EnemyProceduralAnimator>(root);
             var serialized = new SerializedObject(brain);
+            var combat = CombatProfile(enemyName);
+            serialized.FindProperty("maximumHealth").floatValue = combat.Health;
+            serialized.FindProperty("damage").floatValue = combat.Damage;
+            serialized.FindProperty("lootGoblin").boolValue = enemyName == "Chest";
+            if (enemyName == "Chest")
+            {
+                serialized.FindProperty("movementSpeed").floatValue = 4.8f;
+                serialized.FindProperty("coreShardsDropMin").intValue = 50;
+                serialized.FindProperty("coreShardsDropMax").intValue = 100;
+            }
             serialized.FindProperty("canPassThroughBarricades").boolValue = IsOneOf(enemyName,
                 "Banshee", "Ghost", "Water_Slime", "Storm_Elemental", "Poison_Slime");
             serialized.FindProperty("assassin").boolValue = IsOneOf(enemyName,
@@ -284,6 +294,67 @@ public static class EnemyPrefabSetup
         foreach (var choice in choices)
             if (value == choice) return true;
         return false;
+    }
+
+    private readonly struct EnemyCombatProfile
+    {
+        public readonly float Health;
+        public readonly float Damage;
+
+        public EnemyCombatProfile(float health, float damage)
+        {
+            Health = health;
+            Damage = damage;
+        }
+    }
+
+    private static EnemyCombatProfile CombatProfile(string enemyName)
+    {
+        // Damage assumes the shared 1.1 s attack cooldown. Health is expressed in
+        // meaningful hero hits: fodder 2-3, regular 3-5, elite 6-10, boss 14+.
+        return enemyName switch
+        {
+            "Bat_Monster" => new EnemyCombatProfile(45f, 7f),
+            "Frog" => new EnemyCombatProfile(60f, 8f),
+            "Mushroom" => new EnemyCombatProfile(65f, 8f),
+            "Kobold" => new EnemyCombatProfile(75f, 10f),
+            "Skeleton" => new EnemyCombatProfile(80f, 10f),
+            "Book" => new EnemyCombatProfile(70f, 9f),
+            "Cursed_Doll" => new EnemyCombatProfile(75f, 14f),
+            "Spider" => new EnemyCombatProfile(80f, 11f),
+            "Ghost" => new EnemyCombatProfile(85f, 11f),
+            "Poison_Slime" => new EnemyCombatProfile(90f, 10f),
+            "Dark_Elf" => new EnemyCombatProfile(90f, 11f),
+            "Chompfin" => new EnemyCombatProfile(95f, 14f),
+            "Ghoul" => new EnemyCombatProfile(95f, 12f),
+            "Water_Slime" => new EnemyCombatProfile(100f, 11f),
+            "Werewolf" => new EnemyCombatProfile(170f, 18f),
+            "Zombie" => new EnemyCombatProfile(105f, 12f),
+            "Witch" => new EnemyCombatProfile(2300f, 32f),
+            "Vampire" => new EnemyCombatProfile(110f, 16f),
+            "Storm_Elemental" => new EnemyCombatProfile(115f, 13f),
+            "Rat_Mutant" => new EnemyCombatProfile(120f, 13f),
+            "Mummy" => new EnemyCombatProfile(125f, 12f),
+            "Fire_Elemental" => new EnemyCombatProfile(130f, 15f),
+            "Orc" => new EnemyCombatProfile(135f, 15f),
+            "Mossy" => new EnemyCombatProfile(145f, 12f),
+            "Frostbite" => new EnemyCombatProfile(150f, 14f),
+            "Banshee" => new EnemyCombatProfile(1500f, 28f),
+            "Satyr" => new EnemyCombatProfile(155f, 16f),
+            "Warlock" => new EnemyCombatProfile(3000f, 40f),
+            "Demon" => new EnemyCombatProfile(190f, 18f),
+            "Pumpkin_Fiend" => new EnemyCombatProfile(200f, 24f),
+            "Brute" => new EnemyCombatProfile(240f, 21f),
+            "Dark_Knight" => new EnemyCombatProfile(260f, 22f),
+            "Cyclop" => new EnemyCombatProfile(2000f, 35f),
+            "Frankenstein" => new EnemyCombatProfile(300f, 23f),
+            "Troll" => new EnemyCombatProfile(1200f, 30f),
+            "Minotaur" => new EnemyCombatProfile(340f, 27f),
+            "Stone_Golem" => new EnemyCombatProfile(400f, 30f),
+            "Chest" => new EnemyCombatProfile(180f, 0f),
+            "Crystal" => new EnemyCombatProfile(500f, 30f),
+            _ => new EnemyCombatProfile(100f, 12f)
+        };
     }
 }
 #endif

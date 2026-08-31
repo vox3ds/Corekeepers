@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
@@ -47,6 +48,7 @@ namespace CoreKeepers
             GUILayout.Label("C: switch class (Warrior / Mage / Builder / Healer)", labelStyle);
             GUILayout.Label("K: debug-down the local player", labelStyle);
             GUILayout.Label("V: spawn selected enemy  |  = / -: change enemy", labelStyle);
+            GUILayout.Label("F6: VFX Debug Lab (heroes + enemies)", labelStyle);
             GUILayout.EndArea();
             DrawResurrectionPrompts(local);
         }
@@ -140,6 +142,11 @@ namespace CoreKeepers
         private GameObject warriorIcon;
         private GameObject healerIcon;
         private GameObject mageIcon;
+        private readonly Image[] effectSlots = new Image[8];
+        private readonly GameObject[] effectSlotObjects = new GameObject[8];
+        private readonly List<HeroSkillDefinition> activePassives = new();
+        private static readonly Dictionary<string, Sprite> placeholderIcons = new();
+        private float nextEffectSlotBindAt;
 
         public static void AttachToScenePanel()
         {
@@ -172,6 +179,7 @@ namespace CoreKeepers
             warriorIcon = FindChild("WarrorIcon", "WarriorIcon")?.gameObject;
             healerIcon = FindChild("HealerIcon")?.gameObject;
             mageIcon = FindChild("MageIcon")?.gameObject;
+            BindEffectSlots();
             ShowWaitingState();
         }
 
@@ -202,6 +210,7 @@ namespace CoreKeepers
             if (bagFullIcon != null)
                 bagFullIcon.SetActive(carried >= capacity);
             SetClassIcons(hero.PlayerClass);
+            RefreshEffects(hero);
         }
 
         private void ShowWaitingState()
@@ -221,6 +230,107 @@ namespace CoreKeepers
             SetIcon(warriorIcon, false);
             SetIcon(healerIcon, false);
             SetIcon(mageIcon, false);
+            ClearEffectSlots();
+        }
+
+        private void BindEffectSlots()
+        {
+            for (var index = 0; index < effectSlots.Length; index++)
+            {
+                var slot = FindChild($"EffectSlot{index + 1}");
+                effectSlotObjects[index] = slot != null ? slot.gameObject : null;
+                effectSlots[index] = slot != null
+                    ? slot.GetComponent<Image>() ?? slot.GetComponentInChildren<Image>(true)
+                    : null;
+            }
+        }
+
+        private void RefreshEffects(NetworkWarrior hero)
+        {
+            if (Time.unscaledTime >= nextEffectSlotBindAt && effectSlotObjects[0] == null)
+            {
+                nextEffectSlotBindAt = Time.unscaledTime + 1f;
+                BindEffectSlots();
+            }
+
+            var slotIndex = 0;
+            if (hero.IsDowned)
+                AddEffect(ref slotIndex, null, "Dead", new Color(0.22f, 0.02f, 0.02f));
+            var statuses = hero.ActiveDebuffs;
+            if ((statuses & EnemyDebuff.OnFire) != 0)
+                AddEffect(ref slotIndex, HeroSkillCatalog.Find(102)?.Icon64, "On Fire", new Color(1f, 0.18f, 0.02f));
+            if ((statuses & EnemyDebuff.Stun) != 0)
+                AddEffect(ref slotIndex, HeroSkillCatalog.Find(10)?.Icon64, "Stun", new Color(1f, 0.85f, 0.1f));
+            if ((statuses & EnemyDebuff.Freeze) != 0)
+                AddEffect(ref slotIndex, null, "Frozen", new Color(0.25f, 0.75f, 1f));
+            if ((statuses & EnemyDebuff.Chill) != 0)
+                AddEffect(ref slotIndex, HeroSkillCatalog.Find(103)?.Icon64, "Chill", new Color(0.35f, 0.9f, 1f));
+            if ((statuses & EnemyDebuff.Poisoned) != 0)
+                AddEffect(ref slotIndex, null, "Poison", new Color(0.4f, 0.95f, 0.12f));
+            if ((statuses & EnemyDebuff.Swamp) != 0)
+                AddEffect(ref slotIndex, null, "Swamp", new Color(0.35f, 0.42f, 0.12f));
+
+            var skills = hero.GetComponent<HeroSkillController>();
+            skills?.GetActivePassiveEffects(activePassives);
+            foreach (var passive in activePassives)
+            {
+                if (slotIndex >= effectSlots.Length) break;
+                AddEffect(ref slotIndex, passive.Icon64, passive.DisplayName, new Color(0.45f, 0.55f, 0.95f));
+            }
+            for (; slotIndex < effectSlots.Length; slotIndex++) SetEffectSlot(slotIndex, null, null);
+        }
+
+        private void AddEffect(ref int slotIndex, Sprite icon, string effectName, Color placeholderColor)
+        {
+            if (slotIndex >= effectSlots.Length) return;
+            SetEffectSlot(slotIndex, icon != null ? icon : GetPlaceholder(effectName, placeholderColor), effectName);
+            slotIndex++;
+        }
+
+        private void SetEffectSlot(int index, Sprite icon, string effectName)
+        {
+            var slotObject = effectSlotObjects[index];
+            var image = effectSlots[index];
+            if (slotObject != null && slotObject.activeSelf != (icon != null)) slotObject.SetActive(icon != null);
+            if (image == null) return;
+            image.sprite = icon;
+            image.enabled = icon != null;
+            image.preserveAspect = true;
+            if (icon != null) image.gameObject.name = image.transform == slotObject?.transform
+                ? slotObject.name : $"{effectName} Icon";
+        }
+
+        private void ClearEffectSlots()
+        {
+            for (var index = 0; index < effectSlots.Length; index++) SetEffectSlot(index, null, null);
+        }
+
+        private static Sprite GetPlaceholder(string key, Color color)
+        {
+            if (placeholderIcons.TryGetValue(key, out var cached)) return cached;
+            const int size = 32;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = $"Placeholder - {key}",
+                hideFlags = HideFlags.DontSave,
+                filterMode = FilterMode.Bilinear
+            };
+            var pixels = new Color[size * size];
+            var center = (size - 1) * 0.5f;
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var distance = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
+                pixels[y * size + x] = distance > center ? Color.clear :
+                    distance > center - 2f ? Color.white : color;
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), Vector2.one * 0.5f, size);
+            sprite.name = $"Placeholder - {key}";
+            sprite.hideFlags = HideFlags.DontSave;
+            placeholderIcons[key] = sprite;
+            return sprite;
         }
 
         private void SetClassIcons(CorePlayerClass playerClass)

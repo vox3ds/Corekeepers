@@ -910,10 +910,10 @@ MonoBehaviour:
   groundRetargetDistance: 0.15
   playerClass: 1
   attackDuration: 0.42
-  attackCooldown: 0.55
+  attackCooldown: 1.5
   attackArc: 100
   attackRange: 1.45
-  damage: 25
+  damage: 45
   buildDuration: 0.75
   mineDuration: 0.8
   mineRange: 1.7
@@ -926,7 +926,7 @@ MonoBehaviour:
   interactionRange: 3
   constructionPower: 15
   startingLevel: 1
-  configuredMaximumHealth: 75
+  configuredMaximumHealth: 85
 --- !u!114 &8290210935015875598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -942,7 +942,7 @@ MonoBehaviour:
   idleBobHeight: 0.08
   idleFrequency: 1.8
   runBobHeight: 0.18
-  runFrequency: 8
+  runFrequency: 3
   runHandTravel: 0.22
   runTilt: 7
   runBlendTime: 0.14

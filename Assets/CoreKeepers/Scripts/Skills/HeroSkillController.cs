@@ -20,6 +20,35 @@ namespace CoreKeepers
             public double NextTick;
         }
 
+        private sealed class PendingProjectile
+        {
+            public HeroSkillDefinition Skill;
+            public EnemyBrain Target;
+            public Vector3 Position;
+            public Vector3 TargetPoint;
+            public double ExpiresAt;
+        }
+
+        private sealed class PendingArcaneBolt
+        {
+            public HeroSkillDefinition Skill;
+            public Vector3 Position;
+            public Vector3 Direction;
+            public float DistanceTraveled;
+            public double ExpiresAt;
+        }
+
+        private sealed class PendingFirePatch
+        {
+            public Vector3 Position;
+            public float Radius;
+            public double EndsAt;
+            public double NextTick;
+        }
+
+        private const float HeroProjectileSpeed = 13f;
+        private const float ArcaneBoltSpeed = HeroProjectileSpeed * 2f;
+
         private readonly HeroSkillDefinition[] slots = new HeroSkillDefinition[4];
         private readonly float[] localReadyAt = new float[4];
         private readonly Dictionary<int, double> serverReadyAt = new();
@@ -27,11 +56,15 @@ namespace CoreKeepers
         private readonly HashSet<int> chosenWaves = new();
         private readonly HashSet<int> localChosenWaves = new();
         private readonly List<ActiveZone> activeZones = new();
+        private readonly List<PendingProjectile> pendingProjectiles = new();
+        private readonly List<PendingArcaneBolt> pendingArcaneBolts = new();
+        private readonly List<PendingFirePatch> pendingFirePatches = new();
         private readonly Dictionary<ulong, double> guardianAngelReadyAt = new();
         private NetworkWarrior hero;
         private int selectedSlot;
         private int offeredWave;
         private int localLastChosenWave;
+        private int serverDebugUnlockedWave;
         private int observedMissionRevision = -1;
         private float nextHudRefresh;
         private double nextPassiveTick;
@@ -94,6 +127,10 @@ namespace CoreKeepers
         public float SelectedUseRange => slots[selectedSlot] == null ? 2f : slots[selectedSlot].Effect ==
             HeroSkillEffect.ExplodingProjectile && slots[selectedSlot].SecondaryValue > 0f
                 ? slots[selectedSlot].SecondaryValue : slots[selectedSlot].Radius;
+        public float SelectedApproachRange => slots[selectedSlot] == null ? SelectedUseRange :
+            slots[selectedSlot].StableId == 103 ? 2f :
+            slots[selectedSlot].Effect is HeroSkillEffect.MeleeArc or HeroSkillEffect.ShieldBash
+                ? Mathf.Min(SelectedUseRange, 1.35f) : SelectedUseRange;
         public float GetRemainingCooldown(int index) => index < 0 || index >= slots.Length
             ? 0f : Mathf.Max(0f, localReadyAt[index] - Time.time);
 
@@ -132,12 +169,38 @@ namespace CoreKeepers
             HeroSkillsUI.Instance?.Refresh();
         }
 
+        public bool TryGrantNextDebugLevel()
+        {
+            if (!hero.IsOwner || BlocksLocalGameplay || offeredWave > 0) return false;
+            var next = localLastChosenWave + 1;
+            if (next > 6) return false;
+            var choices = HeroSkillCatalog.Choices(hero.PlayerClass, next);
+            if (choices.Length != 2)
+            {
+                Debug.LogError($"{hero.PlayerClass} Level {next} requires exactly two skill definitions.", this);
+                return false;
+            }
+            var popup = SkillUpgradePopupUI.Instance ??
+                FindFirstObjectByType<SkillUpgradePopupUI>(FindObjectsInactive.Include);
+            if (popup == null)
+            {
+                Debug.LogError("Skill Upgrade Popup was not found in DebugScene.", this);
+                return false;
+            }
+            offeredWave = next;
+            hero.RequestDebugSkillLevel(next);
+            popup.Show(this, next, choices);
+            return true;
+        }
+
         public bool TryUseSelectedOnTarget(NetworkObject target)
         {
             if (!hero.IsOwner || target == null || selectedSlot < 0 || selectedSlot >= slots.Length)
                 return false;
             var definition = slots[selectedSlot];
-            if (definition == null || definition.Targeting != HeroSkillTargeting.Enemy || GetRemainingCooldown(selectedSlot) > 0f)
+            if (definition == null ||
+                (definition.Targeting != HeroSkillTargeting.Enemy && definition.StableId != 103) ||
+                GetRemainingCooldown(selectedSlot) > 0f)
                 return false;
             return RequestUse(definition, target.transform.position, target);
         }
@@ -147,7 +210,7 @@ namespace CoreKeepers
             if (!hero.IsOwner || selectedSlot < 0 || selectedSlot >= slots.Length) return false;
             var definition = slots[selectedSlot];
             if (definition == null || GetRemainingCooldown(selectedSlot) > 0f ||
-                definition.Effect != HeroSkillEffect.MeleeArc) return false;
+                definition.Effect != HeroSkillEffect.MeleeArc && definition.StableId is not (101 or 102 or 103)) return false;
             return RequestUse(definition, point, null);
         }
 
@@ -164,10 +227,21 @@ namespace CoreKeepers
             if (!hero.IsServer || definition == null || definition.HeroClass != hero.PlayerClass ||
                 definition.UnlockWave != wave || wave < 1 || wave > 6 || chosenWaves.Contains(wave)) return;
             var waveController = CoreMissionWaveController.Instance;
-            if (waveController != null && waveController.CompletedWaves < wave) return;
+            if ((waveController == null || waveController.CompletedWaves < wave) && serverDebugUnlockedWave < wave)
+                return;
             chosenWaves.Add(wave);
             acquired.Add(definition.StableId);
             ApplyImmediatePassive(definition);
+        }
+
+        public bool ServerGrantDebugLevel(int wave)
+        {
+            var highestChosenWave = chosenWaves.Count > 0 ? chosenWaves.Max() : 0;
+            var currentWave = Mathf.Max(serverDebugUnlockedWave, highestChosenWave);
+            if (!hero.IsServer || wave < 1 || wave > 6 || wave != currentWave + 1)
+                return false;
+            serverDebugUnlockedWave = wave;
+            return true;
         }
 
         public bool ServerTryExecute(HeroSkillDefinition definition, Vector3 requestedPosition,
@@ -181,6 +255,7 @@ namespace CoreKeepers
             var now = hero.NetworkManager.ServerTime.Time;
             if (serverReadyAt.TryGetValue(definition.StableId, out var readyAt) && now < readyAt) return false;
             if (!Execute(definition, requestedPosition, requestedTarget, now)) return false;
+            hero.ServerPresentSkill(definition, requestedPosition, requestedTarget);
             effectiveCooldown = GetEffectiveServerCooldown(definition);
             serverReadyAt[definition.StableId] = now + effectiveCooldown;
             if (definition.SkillType == HeroSkillType.Active && acquired.Contains(112))
@@ -223,6 +298,20 @@ namespace CoreKeepers
         public bool IsCrowdControlImmune => selfCcImmune;
         public bool HasPassive(int stableId) => acquired.Contains(stableId);
 
+        public void GetActivePassiveEffects(List<HeroSkillDefinition> results)
+        {
+            if (results == null) return;
+            results.Clear();
+            foreach (var stableId in acquired.OrderBy(id => id))
+            {
+                var definition = HeroSkillCatalog.Find(stableId);
+                if (definition == null || definition.SkillType != HeroSkillType.Passive) continue;
+                if (stableId is 8 or 9 && hero.HealthRatio >= 0.3f) continue;
+                if (stableId == 12 && EnemiesInRadius(hero.transform.position, 7f).Count < 10) continue;
+                results.Add(definition);
+            }
+        }
+
         public void ServerElementalDetonation(Vector3 position)
         {
             if (!hero.IsServer || !acquired.Contains(113)) return;
@@ -239,10 +328,14 @@ namespace CoreKeepers
             chosenWaves.Clear();
             localChosenWaves.Clear();
             activeZones.Clear();
+            pendingProjectiles.Clear();
+            pendingArcaneBolts.Clear();
+            pendingFirePatches.Clear();
             guardianAngelReadyAt.Clear();
             selectedSlot = 0;
             offeredWave = 0;
             localLastChosenWave = 0;
+            serverDebugUnlockedWave = 0;
             selfBuffEndsAt = 0d;
             selfDamageMultiplier = 1f;
             selfResistance = 0f;
@@ -278,7 +371,8 @@ namespace CoreKeepers
             if (Mathf.Abs(scroll) > 0.01f) CycleSelection(scroll > 0f ? -1 : 1);
             if (!mouse.leftButton.wasPressedThisFrame || GameplayInputGate.IsPointerBlocked || hero.IsDowned) return;
             var definition = slots[selectedSlot];
-            if (definition == null || definition.Targeting == HeroSkillTargeting.Enemy || GetRemainingCooldown(selectedSlot) > 0f)
+            if (definition == null || definition.StableId == 103 ||
+                definition.Targeting == HeroSkillTargeting.Enemy || GetRemainingCooldown(selectedSlot) > 0f)
                 return;
             var point = hero.transform.position;
             if (definition.Targeting == HeroSkillTargeting.Ground)
@@ -360,8 +454,9 @@ namespace CoreKeepers
                 case HeroSkillEffect.Charge: return Charge(skill, point, target);
                 case HeroSkillEffect.Taunt: return Taunt(skill, now);
                 case HeroSkillEffect.SelfBuff: return ApplySelfBuff(skill, now);
-                case HeroSkillEffect.SingleProjectile: return DamageTarget(skill, target);
-                case HeroSkillEffect.ExplodingProjectile: return ExplodeOnTarget(skill, target);
+                case HeroSkillEffect.SingleProjectile:
+                    return skill.StableId == 101 ? QueueArcaneBolt(skill, point, target) : QueueProjectile(skill, point, target);
+                case HeroSkillEffect.ExplodingProjectile: return QueueProjectile(skill, point, target);
                 case HeroSkillEffect.RadialDebuff:
                     if (skill.StableId == 10) return BeginEarthshatter(skill);
                     return DamageAndDebuffRadius(skill, hero.transform.position);
@@ -396,6 +491,7 @@ namespace CoreKeepers
         {
             var hit = false;
             foreach (var enemy in EnemiesInRadius(center, skill.Radius)) { DealDamage(skill, enemy); hit = true; }
+            hit |= DamageFriendlyTargets(skill, center);
             return hit || skill.Targeting != HeroSkillTargeting.Enemy;
         }
 
@@ -408,7 +504,28 @@ namespace CoreKeepers
                 if (skill.Debuff != EnemyDebuff.None) enemy.ApplyDebuff(skill.Debuff, skill.Duration, hero);
                 hit = true;
             }
+            hit |= DamageFriendlyTargets(skill, center);
             return hit || skill.Targeting != HeroSkillTargeting.Enemy;
+        }
+
+        private bool DamageFriendlyTargets(HeroSkillDefinition skill, Vector3 center)
+        {
+            var hit = false;
+            var amount = FriendlyFireDamage(skill);
+            foreach (var friendlyHero in HeroesInRadius(center, skill.Radius))
+            {
+                if (skill.StableId == 103 && friendlyHero == hero) continue;
+                friendlyHero.TakeDamage(amount);
+                if (skill.Debuff != EnemyDebuff.None)
+                    friendlyHero.ServerApplyDebuff(skill.Debuff, Mathf.Max(1f, skill.Duration));
+                hit = true;
+            }
+            foreach (var building in BuildingsInRadius(center, skill.Radius))
+            {
+                building.Damage(amount);
+                hit = true;
+            }
+            return hit;
         }
 
         private bool Bash(HeroSkillDefinition skill, NetworkObject target)
@@ -467,21 +584,50 @@ namespace CoreKeepers
             return true;
         }
 
-        private bool DamageTarget(HeroSkillDefinition skill, NetworkObject target)
+        private bool QueueProjectile(HeroSkillDefinition skill, Vector3 point, NetworkObject target)
         {
             var enemy = target != null ? target.GetComponent<EnemyBrain>() : null;
-            if (enemy == null || !enemy.IsAlive || Vector3.Distance(hero.transform.position, enemy.transform.position) > skill.Radius) return false;
-            DealDamage(skill, enemy);
+            var castRange = skill.Effect == HeroSkillEffect.ExplodingProjectile && skill.SecondaryValue > 0f
+                ? skill.SecondaryValue : skill.Radius;
+            if (target != null && (enemy == null || !enemy.IsAlive))
+                return false;
+            var targetPoint = enemy != null ? enemy.transform.position : point;
+            if (target == null && skill.Effect != HeroSkillEffect.ExplodingProjectile) return false;
+            if (Vector3.Distance(hero.transform.position, targetPoint) > castRange) return false;
+            pendingProjectiles.Add(new PendingProjectile
+            {
+                Skill = skill,
+                Target = enemy,
+                Position = hero.transform.position + Vector3.up * 0.75f,
+                TargetPoint = targetPoint,
+                ExpiresAt = hero.NetworkManager.ServerTime.Time + 4d
+            });
             return true;
         }
 
-        private bool ExplodeOnTarget(HeroSkillDefinition skill, NetworkObject target)
+        private bool QueueArcaneBolt(HeroSkillDefinition skill, Vector3 point, NetworkObject target)
         {
             var enemy = target != null ? target.GetComponent<EnemyBrain>() : null;
-            var castRange = skill.SecondaryValue > 0f ? skill.SecondaryValue : 16f;
-            if (enemy == null || !enemy.IsAlive || Vector3.Distance(hero.transform.position, enemy.transform.position) > castRange)
+            var dummy = target != null ? target.GetComponent<CoreDebugDummy>() : null;
+            if (target != null && (enemy == null || !enemy.IsAlive) && (dummy == null || dummy.Health <= 0f))
                 return false;
-            return DamageRadius(skill, enemy.transform.position);
+            if (target != null && Vector3.Distance(hero.transform.position, target.transform.position) > skill.Radius)
+                return false;
+
+            var origin = hero.transform.position + Vector3.up * 0.75f;
+            var aimPoint = target != null ? target.transform.position + Vector3.up * 0.75f : point + Vector3.up * 0.75f;
+            var direction = aimPoint - origin;
+            if (direction.sqrMagnitude < 0.001f) direction = hero.transform.forward;
+            direction.Normalize();
+            hero.ServerFace(origin + direction);
+            pendingArcaneBolts.Add(new PendingArcaneBolt
+            {
+                Skill = skill,
+                Position = origin,
+                Direction = direction,
+                ExpiresAt = hero.NetworkManager.ServerTime.Time + skill.Radius / ArcaneBoltSpeed
+            });
+            return true;
         }
 
         private bool Chain(HeroSkillDefinition skill, NetworkObject target)
@@ -591,6 +737,9 @@ namespace CoreKeepers
         private void UpdateServerState()
         {
             var now = hero.NetworkManager.ServerTime.Time;
+            UpdateArcaneBolts(now);
+            UpdateProjectiles(now);
+            UpdateFirePatches(now);
             UpdatePendingWarriorImpacts();
             if (selfBuffEndsAt > 0d && now >= selfBuffEndsAt)
             {
@@ -620,6 +769,156 @@ namespace CoreKeepers
             if (acquired.Contains(213))
                 foreach (var building in BuildingsInRadius(hero.transform.position, 6f))
                     building.ApplyTimedModifiers(hero.NetworkObjectId, 1.1f, 1.1f, 1f, 0.1f, 1.2f);
+        }
+
+        private void UpdateArcaneBolts(double now)
+        {
+            for (var index = pendingArcaneBolts.Count - 1; index >= 0; index--)
+            {
+                var bolt = pendingArcaneBolts[index];
+                if (now >= bolt.ExpiresAt)
+                {
+                    pendingArcaneBolts.RemoveAt(index);
+                    continue;
+                }
+
+                var distance = ArcaneBoltSpeed * Time.deltaTime;
+                var hits = Physics.SphereCastAll(bolt.Position, 0.22f, bolt.Direction, distance,
+                    Physics.AllLayers, QueryTriggerInteraction.Collide);
+                Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+                var consumed = false;
+                foreach (var hit in hits)
+                {
+                    var friendlyHero = hit.collider.GetComponentInParent<NetworkWarrior>();
+                    if (friendlyHero != null)
+                    {
+                        if (friendlyHero == hero && bolt.DistanceTraveled < 1.25f) continue;
+                        friendlyHero.TakeDamage(ArcaneBoltDamage(bolt.Skill));
+                        hero.ServerPresentProjectileImpact(bolt.Skill.StableId,
+                            hit.point - bolt.Direction * 0.06f, bolt.Direction);
+                        consumed = true;
+                        break;
+                    }
+                    var building = hit.collider.GetComponentInParent<CoreBuilding>();
+                    if (building != null)
+                    {
+                        building.Damage(ArcaneBoltDamage(bolt.Skill));
+                        hero.ServerPresentProjectileImpact(bolt.Skill.StableId,
+                            hit.point - bolt.Direction * 0.06f, bolt.Direction);
+                        consumed = true;
+                        break;
+                    }
+                    var enemy = hit.collider.GetComponentInParent<EnemyBrain>();
+                    var dummy = hit.collider.GetComponentInParent<CoreDebugDummy>();
+                    if (enemy != null && enemy.IsAlive)
+                    {
+                        DealDamage(bolt.Skill, enemy);
+                        hero.ServerPresentProjectileImpact(bolt.Skill.StableId,
+                            hit.point - bolt.Direction * 0.06f, bolt.Direction);
+                        consumed = true;
+                        break;
+                    }
+                    if (dummy != null && dummy.Health > 0f)
+                    {
+                        dummy.TakeDamage(ArcaneBoltDamage(bolt.Skill));
+                        hero.ServerPresentProjectileImpact(bolt.Skill.StableId,
+                            hit.point - bolt.Direction * 0.06f, bolt.Direction);
+                        consumed = true;
+                        break;
+                    }
+                    if (!hit.collider.isTrigger)
+                    {
+                        hero.ServerDismissProjectile(bolt.Skill.StableId, hit.point, bolt.Direction);
+                        consumed = true;
+                        break;
+                    }
+                }
+
+                if (consumed)
+                {
+                    pendingArcaneBolts.RemoveAt(index);
+                    continue;
+                }
+                bolt.Position += bolt.Direction * distance;
+                bolt.DistanceTraveled += distance;
+            }
+        }
+
+        private float ArcaneBoltDamage(HeroSkillDefinition skill)
+        {
+            var amount = skill.Power * selfDamageMultiplier * hero.OutgoingDamageMultiplier;
+            if (skill.SkillType == HeroSkillType.Active && acquired.Contains(104)) amount *= 1.2f;
+            if (skill.SkillType == HeroSkillType.Active && acquired.Contains(109)) amount *= 1.25f;
+            return amount;
+        }
+
+        private void UpdateProjectiles(double now)
+        {
+            for (var index = pendingProjectiles.Count - 1; index >= 0; index--)
+            {
+                var projectile = pendingProjectiles[index];
+                if ((projectile.Target != null && !projectile.Target.IsAlive) || now >= projectile.ExpiresAt)
+                {
+                    pendingProjectiles.RemoveAt(index);
+                    continue;
+                }
+                var impactPoint = projectile.Target != null ? projectile.Target.transform.position : projectile.TargetPoint;
+                var targetPoint = impactPoint + Vector3.up * 0.75f;
+                var offset = targetPoint - projectile.Position;
+                var step = HeroProjectileSpeed * Time.deltaTime;
+                if (offset.magnitude > step)
+                {
+                    projectile.Position += offset.normalized * step;
+                    continue;
+                }
+                pendingProjectiles.RemoveAt(index);
+                if (projectile.Skill.Effect == HeroSkillEffect.ExplodingProjectile)
+                {
+                    DamageRadius(projectile.Skill, impactPoint);
+                    if (projectile.Skill.StableId == 102)
+                        pendingFirePatches.Add(new PendingFirePatch
+                        {
+                            Position = impactPoint,
+                            Radius = projectile.Skill.Radius,
+                            EndsAt = now + projectile.Skill.Duration,
+                            NextTick = now
+                        });
+                }
+                else
+                    DealDamage(projectile.Skill, projectile.Target);
+            }
+        }
+
+        private void UpdateFirePatches(double now)
+        {
+            const double tickInterval = 0.25d;
+            const float fireDamagePerSecond = 3f;
+            for (var index = pendingFirePatches.Count - 1; index >= 0; index--)
+            {
+                var patch = pendingFirePatches[index];
+                if (now >= patch.EndsAt)
+                {
+                    pendingFirePatches.RemoveAt(index);
+                    continue;
+                }
+                if (now < patch.NextTick) continue;
+                patch.NextTick = now + tickInterval;
+                foreach (var friendlyHero in HeroesInRadius(patch.Position, patch.Radius))
+                    friendlyHero.ServerIgnite(2f, fireDamagePerSecond);
+                foreach (var enemy in EnemiesInRadius(patch.Position, patch.Radius))
+                    enemy.ApplyDebuff(EnemyDebuff.OnFire, 2f, hero);
+                foreach (var building in BuildingsInRadius(patch.Position, patch.Radius))
+                    building.Damage(fireDamagePerSecond * (float)tickInterval);
+            }
+        }
+
+        private float FriendlyFireDamage(HeroSkillDefinition skill)
+        {
+            var amount = skill.Power * selfDamageMultiplier * hero.OutgoingDamageMultiplier;
+            if (skill.SkillType == HeroSkillType.Basic && acquired.Contains(5)) amount *= 1.2f;
+            if (skill.SkillType == HeroSkillType.Active && acquired.Contains(104)) amount *= 1.2f;
+            if (skill.SkillType == HeroSkillType.Active && acquired.Contains(109)) amount *= 1.25f;
+            return amount;
         }
 
         private void UpdatePendingWarriorImpacts()

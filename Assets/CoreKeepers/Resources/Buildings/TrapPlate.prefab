@@ -1107,7 +1107,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.CoreTrapPlate
   ShowTopMostFoldoutHeaderGroup: 1
-  damage: 35
+  damage: 50
 --- !u!1 &3850442223738505401
 GameObject:
   m_ObjectHideFlags: 0

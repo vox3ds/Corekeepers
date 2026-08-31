@@ -266,9 +266,10 @@ MonoBehaviour:
   canPassThroughBarricades: 0
   assassin: 0
   coreOnly: 0
+  lootGoblin: 0
   enemyType: 0
-  maximumHealth: 100
-  damage: 3
+  maximumHealth: 145
+  damage: 12
   attackRange: 1.4
   attackDuration: 0.55
   attackCooldown: 1.1
@@ -276,6 +277,9 @@ MonoBehaviour:
   heroAggroDuration: 10
   tauntDuration: 15
   deathAnimationDuration: 1.1
+  lootGoblinEscapeDuration: 35
+  lootGoblinFleeDistance: 8
+  lootGoblinPathRefreshInterval: 0.35
   explosionEffectPrefab: {fileID: 0}
   explosionEffectLifetime: 2
   coreShardsDropMin: 0

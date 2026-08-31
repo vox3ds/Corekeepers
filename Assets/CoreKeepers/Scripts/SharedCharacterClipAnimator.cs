@@ -21,6 +21,8 @@ namespace CoreKeepers
     [DisallowMultipleComponent]
     public sealed class SharedCharacterClipAnimator : MonoBehaviour
     {
+        private const float HeroRunAnimationSpeedScale = 0.375f;
+
         private readonly struct ClipRequest
         {
             public readonly string Name;
@@ -53,6 +55,14 @@ namespace CoreKeepers
         private string activeClipName;
         private float activeLocalTime;
         private float blendProgress = 1f;
+        private Transform[] poseTransforms = Array.Empty<Transform>();
+        private Vector3[] targetRestPositions = Array.Empty<Vector3>();
+        private Quaternion[] targetRestRotations = Array.Empty<Quaternion>();
+        private Vector3[] targetRestScales = Array.Empty<Vector3>();
+        private Vector3[] positionOffsets = Array.Empty<Vector3>();
+        private Quaternion[] rotationOffsets = Array.Empty<Quaternion>();
+        private Vector3[] scaleRatios = Array.Empty<Vector3>();
+        private bool restPoseCalibrated;
 
         public Animator TargetAnimator => targetAnimator;
 
@@ -62,6 +72,7 @@ namespace CoreKeepers
             enemy = GetComponent<EnemyBrain>();
             enemyPreset = GetComponent<EnemyProceduralAnimator>();
             RebuildLookup();
+            CacheTargetRestPose();
         }
 
         private void OnEnable()
@@ -72,6 +83,11 @@ namespace CoreKeepers
         private void OnDisable()
         {
             DestroyGraph();
+        }
+
+        private void Start()
+        {
+            CalibrateRestPoseOffsets();
         }
 
         private void LateUpdate()
@@ -90,6 +106,7 @@ namespace CoreKeepers
             ApplyRequest(request);
             UpdateBlend();
             graph.Evaluate(0f);
+            ApplyRestPoseOffsets();
         }
 
         public void Configure(Animator animator, NamedCharacterClip[] animationClips)
@@ -107,7 +124,10 @@ namespace CoreKeepers
             var progress = hero.ActionProgress;
             switch (hero.CurrentAction)
             {
-                case WarriorAction.Attack: return Sync("AttackRHand", progress);
+                case WarriorAction.Attack:
+                    return hero.PlayerClass == CorePlayerClass.Mage || hero.PlayerClass == CorePlayerClass.Healer
+                        ? Sync("CastProjectileRHand", progress)
+                        : Sync("AttackRHand", progress);
                 case WarriorAction.Build: return Sync("Build", progress);
                 case WarriorAction.Mine: return Sync("Mine", progress);
                 case WarriorAction.Deposit: return Sync("Deposit", progress);
@@ -116,10 +136,13 @@ namespace CoreKeepers
                 case WarriorAction.ShieldBash: return Sync("ShieldSmash", progress);
                 case WarriorAction.BattleCharge: return SyncLoop("RunLoop", progress, 2f);
                 case WarriorAction.Earthshatter: return Sync("Smash", progress);
+                case WarriorAction.CastProjectile: return Sync("CastProjectileRHand", progress);
+                case WarriorAction.CastSpellUp: return Sync("CastSpellUp", progress);
+                case WarriorAction.CastSpellAround: return Sync("CastSpellAround", progress);
             }
 
             if (hero.NormalizedSpeed > 0.08f)
-                return Loop("RunLoop", Mathf.Lerp(0.7f, 1.35f, hero.NormalizedSpeed));
+                return Loop("RunLoop", Mathf.Lerp(0.7f, 1.35f, hero.NormalizedSpeed) * HeroRunAnimationSpeedScale);
             return Loop("Idle", 1f);
         }
 
@@ -284,6 +307,114 @@ namespace CoreKeepers
             foreach (var entry in clips)
                 if (!string.IsNullOrWhiteSpace(entry.name) && entry.clip != null)
                     clipLookup[entry.name] = entry.clip;
+        }
+
+        private void CacheTargetRestPose()
+        {
+            if (targetAnimator == null)
+                return;
+
+            var transforms = new List<Transform>(3);
+            AddRigPartIfPresent(transforms, "Head");
+            AddRigPartIfPresent(transforms, "LHand");
+            AddRigPartIfPresent(transforms, "RHand");
+            poseTransforms = transforms.ToArray();
+            targetRestPositions = new Vector3[poseTransforms.Length];
+            targetRestRotations = new Quaternion[poseTransforms.Length];
+            targetRestScales = new Vector3[poseTransforms.Length];
+            positionOffsets = new Vector3[poseTransforms.Length];
+            rotationOffsets = new Quaternion[poseTransforms.Length];
+            scaleRatios = new Vector3[poseTransforms.Length];
+            for (var index = 0; index < poseTransforms.Length; index++)
+            {
+                var item = poseTransforms[index];
+                targetRestPositions[index] = item.localPosition;
+                targetRestRotations[index] = item.localRotation;
+                targetRestScales[index] = item.localScale;
+                rotationOffsets[index] = Quaternion.identity;
+                scaleRatios[index] = Vector3.one;
+            }
+        }
+
+        private void CalibrateRestPoseOffsets()
+        {
+            if (restPoseCalibrated || targetAnimator == null || poseTransforms.Length == 0 ||
+                !clipLookup.TryGetValue("Idle", out var idleClip) || idleClip == null)
+                return;
+
+            EnsureGraph();
+            if (!graph.IsValid())
+                return;
+
+            var probe = AnimationClipPlayable.Create(graph, idleClip);
+            probe.SetSpeed(0d);
+            probe.SetTime(0d);
+            graph.Connect(probe, 0, mixer, 0);
+            mixer.SetInputWeight(0, 1f);
+            mixer.SetInputWeight(1, 0f);
+            graph.Evaluate(0f);
+
+            for (var index = 0; index < poseTransforms.Length; index++)
+            {
+                var item = poseTransforms[index];
+                var sourcePosition = item.localPosition;
+                var sourceRotation = item.localRotation;
+                var sourceScale = item.localScale;
+                positionOffsets[index] = targetRestPositions[index] - sourcePosition;
+                rotationOffsets[index] = targetRestRotations[index] * Quaternion.Inverse(sourceRotation);
+                scaleRatios[index] = DivideScale(targetRestScales[index], sourceScale);
+            }
+
+            mixer.DisconnectInput(0);
+            probe.Destroy();
+            mixer.SetInputWeight(0, 0f);
+            for (var index = 0; index < poseTransforms.Length; index++)
+            {
+                var item = poseTransforms[index];
+                item.localPosition = targetRestPositions[index];
+                item.localRotation = targetRestRotations[index];
+                item.localScale = targetRestScales[index];
+            }
+            restPoseCalibrated = true;
+        }
+
+        private void ApplyRestPoseOffsets()
+        {
+            if (!restPoseCalibrated)
+            {
+                CalibrateRestPoseOffsets();
+                if (!restPoseCalibrated)
+                    return;
+            }
+
+            for (var index = 0; index < poseTransforms.Length; index++)
+            {
+                var item = poseTransforms[index];
+                if (item == null)
+                    continue;
+                item.localPosition += positionOffsets[index];
+                item.localRotation = rotationOffsets[index] * item.localRotation;
+                item.localScale = Vector3.Scale(scaleRatios[index], item.localScale);
+            }
+        }
+
+        private void AddRigPartIfPresent(List<Transform> destination, string partName)
+        {
+            foreach (var item in targetAnimator.GetComponentsInChildren<Transform>(true))
+            {
+                if (!string.Equals(item.name, partName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                destination.Add(item);
+                return;
+            }
+        }
+
+        private static Vector3 DivideScale(Vector3 target, Vector3 source)
+        {
+            return new Vector3(
+                Mathf.Abs(source.x) > 0.00001f ? target.x / source.x : 1f,
+                Mathf.Abs(source.y) > 0.00001f ? target.y / source.y : 1f,
+                Mathf.Abs(source.z) > 0.00001f ? target.z / source.z : 1f);
         }
 
         private static ClipRequest Sync(string name, float progress) =>

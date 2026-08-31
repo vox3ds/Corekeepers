@@ -9,6 +9,18 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 4931832a49a876745a87b0b180f0da6f, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 4931832a49a876745a87b0b180f0da6f, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 4931832a49a876745a87b0b180f0da6f, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 4931832a49a876745a87b0b180f0da6f, type: 3}
       propertyPath: m_LocalPosition.x
       value: -1.527
       objectReference: {fileID: 0}
@@ -266,9 +278,10 @@ MonoBehaviour:
   canPassThroughBarricades: 1
   assassin: 0
   coreOnly: 0
+  lootGoblin: 0
   enemyType: 1
-  maximumHealth: 100
-  damage: 3
+  maximumHealth: 1500
+  damage: 28
   attackRange: 1.4
   attackDuration: 0.55
   attackCooldown: 1.1
@@ -276,6 +289,9 @@ MonoBehaviour:
   heroAggroDuration: 10
   tauntDuration: 15
   deathAnimationDuration: 1.1
+  lootGoblinEscapeDuration: 35
+  lootGoblinFleeDistance: 8
+  lootGoblinPathRefreshInterval: 0.35
   explosionEffectPrefab: {fileID: 0}
   explosionEffectLifetime: 2
   coreShardsDropMin: 0

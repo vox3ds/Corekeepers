@@ -27,7 +27,12 @@ namespace CoreKeepers
         private static readonly string[] Names = { "Small Tower", "Heavy Tower", "Barricade", "Trap Plate", "Support Pylon" };
         private static readonly int[] Costs = { 20, 30, 15, 18, 25 };
         private static readonly int[] BuildPoints = { 60, 90, 45, 50, 75 };
-        private static readonly float[] MaximumHealth = { 120f, 180f, 220f, 80f, 110f };
+        // Baseline balance targets: towers survive roughly 12-20 normal enemy hits,
+        // while the barricade buys the team a longer repair window.
+        private static readonly float[] MaximumHealth = { 180f, 260f, 360f, 90f, 160f };
+        private static readonly float[] BaseDamage = { 22f, 55f, 0f, 50f, 0f };
+        private static readonly float[] AttackCooldown = { 0.8f, 1.8f, 0f, 0f, 0f };
+        private static readonly float[] AttackRange = { 7f, 8.5f, 0f, 0f, 0f };
         private static readonly string[] Icons = { "▲", "⬢", "▰", "◇", "✦" };
 
         public static string Name(CoreBuildingType type) => Names[(int)type];
@@ -36,6 +41,9 @@ namespace CoreKeepers
         public static MinedResourceKind BuildCurrency(CoreBuildingType type) => MinedResourceKind.Ore;
         public static int RequiredBuildPoints(CoreBuildingType type) => BuildPoints[(int)type];
         public static float MaxHealth(CoreBuildingType type) => MaximumHealth[(int)type];
+        public static float Damage(CoreBuildingType type) => BaseDamage[(int)type];
+        public static float Cooldown(CoreBuildingType type) => AttackCooldown[(int)type];
+        public static float Range(CoreBuildingType type) => AttackRange[(int)type];
         public static int UpgradeCost(CoreBuildingType type, int level) => Mathf.RoundToInt(Cost(type) * (0.75f + level * 0.5f));
         public static MinedResourceKind UpgradeCurrency(CoreBuildingType type) => MinedResourceKind.CoreShards;
         public static string ResourcePath(CoreBuildingType type) => $"Buildings/{type}";
@@ -67,6 +75,7 @@ namespace CoreKeepers
         private Transform buildProgressRoot;
         private Transform constructionProgressBarRoot;
         private Image constructionProgressBarFill;
+        private double nextAttackAt;
         private readonly Dictionary<ulong, TimedModifier> timedModifiers = new();
         private static readonly string[] BuildProgressNames =
             { "Build0%", "Build20%", "Build40%", "Build60%", "Build80%" };
@@ -124,12 +133,50 @@ namespace CoreKeepers
         private void Update()
         {
             RefreshVisuals();
-            if (!IsServer || timedModifiers.Count == 0) return;
+            if (!IsServer) return;
             var now = NetworkManager.ServerTime.Time;
-            var expired = new List<ulong>();
-            foreach (var entry in timedModifiers)
-                if (now >= entry.Value.EndsAt) expired.Add(entry.Key);
-            foreach (var source in expired) timedModifiers.Remove(source);
+            if (timedModifiers.Count > 0)
+            {
+                var expired = new List<ulong>();
+                foreach (var entry in timedModifiers)
+                    if (now >= entry.Value.EndsAt) expired.Add(entry.Key);
+                foreach (var source in expired) timedModifiers.Remove(source);
+            }
+            TryAttack(now);
+        }
+
+        private void TryAttack(double now)
+        {
+            if (state.Value == CoreBuildingState.UnderConstruction || health.Value <= 0f || now < nextAttackAt)
+                return;
+
+            var baseDamage = CoreBuildingCatalog.Damage(buildingType);
+            var baseCooldown = CoreBuildingCatalog.Cooldown(buildingType);
+            var range = CoreBuildingCatalog.Range(buildingType) * RangeMultiplier;
+            if (baseDamage <= 0f || baseCooldown <= 0f || range <= 0f)
+                return;
+
+            EnemyBrain closest = null;
+            var closestSqr = range * range;
+            foreach (var enemy in FindObjectsByType<EnemyBrain>())
+            {
+                if (!enemy.IsAlive) continue;
+                var offset = enemy.transform.position - transform.position;
+                offset.y = 0f;
+                var sqr = offset.sqrMagnitude;
+                if (sqr >= closestSqr) continue;
+                closestSqr = sqr;
+                closest = enemy;
+            }
+            if (closest == null)
+            {
+                nextAttackAt = now + 0.2d;
+                return;
+            }
+
+            var levelMultiplier = 1f + (level.Value - 1) * 0.2f;
+            closest.TakeDamage(baseDamage * levelMultiplier * DamageMultiplier);
+            nextAttackAt = now + baseCooldown / Mathf.Max(0.01f, AttackSpeedMultiplier);
         }
 
         public void BuildOrRepair(int points)

@@ -9,6 +9,7 @@ namespace CoreKeepers
     public sealed class CoreDebugSceneBootstrap : MonoBehaviour
     {
         [SerializeField] private GameObject playerPrefab;
+        [SerializeField, Min(0)] private int debugPort;
 
         private void Start()
         {
@@ -16,6 +17,7 @@ namespace CoreKeepers
             CoreStatusPanel.AttachToScenePanel();
             HeroSkillsUI.AttachToPreparedPanel();
             SkillUpgradePopupUI.AttachToPreparedPopup();
+            CoreVfxDebugLab.EnsureExists();
             EnsureNavigation();
 
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
@@ -39,6 +41,17 @@ namespace CoreKeepers
 
             manager.NetworkConfig.PlayerPrefab = playerPrefab;
             manager.NetworkConfig.EnableSceneManagement = true;
+
+            // A direct DebugScene host does not need a predictable public port. Port 0 asks
+            // the operating system for a free ephemeral port and avoids collisions with a
+            // running game/editor instance. Set debugPort in the inspector only when an
+            // external client needs to connect to this particular debug host.
+            if (manager.NetworkConfig.NetworkTransport is UnityTransport debugTransport)
+            {
+                var port = (ushort)Mathf.Clamp(debugPort, 0, ushort.MaxValue);
+                debugTransport.SetConnectionData(true, "127.0.0.1", port, "127.0.0.1");
+            }
+
             if (!manager.NetworkConfig.Prefabs.Contains(playerPrefab))
                 manager.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = playerPrefab });
             RegisterClassPrefab(manager, "CoreMage");

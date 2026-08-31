@@ -350,9 +350,10 @@ MonoBehaviour:
   canPassThroughBarricades: 0
   assassin: 1
   coreOnly: 0
+  lootGoblin: 0
   enemyType: 0
-  maximumHealth: 100
-  damage: 3
+  maximumHealth: 95
+  damage: 14
   attackRange: 1.4
   attackDuration: 0.55
   attackCooldown: 1.1
@@ -360,6 +361,9 @@ MonoBehaviour:
   heroAggroDuration: 10
   tauntDuration: 15
   deathAnimationDuration: 1.1
+  lootGoblinEscapeDuration: 35
+  lootGoblinFleeDistance: 8
+  lootGoblinPathRefreshInterval: 0.35
   explosionEffectPrefab: {fileID: 0}
   explosionEffectLifetime: 2
   coreShardsDropMin: 0
@@ -389,7 +393,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2e57fb2f21a4fa49cdf51625443bf12, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.EnemyProceduralAnimator
-  attackPreset: 1
+  attackPreset: 7
   movementPreset: 2
   useImportedAnimation: 1
   projectilePrefab: {fileID: 0}

@@ -10,7 +10,7 @@ namespace CoreKeepers
         [SerializeField] private float idleFrequency = 1.8f;
         [Header("Run")]
         [SerializeField] private float runBobHeight = 0.18f;
-        [SerializeField] private float runFrequency = 8f;
+        [SerializeField] private float runFrequency = 3f;
         [SerializeField] private float runHandTravel = 0.22f;
         [SerializeField] private float runTilt = 7f;
         [SerializeField, Min(0.01f)] private float runBlendTime = 0.14f;
@@ -222,6 +222,13 @@ namespace CoreKeepers
                     rightHand.localRotation = rightRotation * Quaternion.Euler(-55f, 0f, 18f);
                     head.localPosition += Vector3.down * 0.05f;
                     break;
+                case WarriorAction.CastProjectile:
+                    AnimateCast(t, false);
+                    break;
+                case WarriorAction.CastSpellUp:
+                case WarriorAction.CastSpellAround:
+                    AnimateCast(t, true);
+                    break;
                 case WarriorAction.Whirlwind:
                     AnimateWhirlwind(t);
                     break;
@@ -235,6 +242,21 @@ namespace CoreKeepers
                     AnimateEarthshatter(t);
                     break;
             }
+        }
+
+        private void AnimateCast(float t, bool bothHands)
+        {
+            var pulse = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI);
+            rightHand.localPosition += new Vector3(-0.08f, 0.22f, 0.42f) * pulse;
+            rightHand.localRotation = rightRotation * Quaternion.Euler(-65f * pulse, 12f * pulse, 0f);
+            if (bothHands)
+            {
+                leftHand.localPosition += new Vector3(0.08f, 0.3f, 0.34f) * pulse;
+                leftHand.localRotation = leftRotation * Quaternion.Euler(-72f * pulse, -12f * pulse, 0f);
+            }
+            head.localPosition += Vector3.up * (0.06f * pulse);
+            if (body != null)
+                body.localRotation = bodyRotation * Quaternion.Euler(-8f * pulse, 0f, 0f);
         }
 
         private void AnimateWhirlwind(float t)

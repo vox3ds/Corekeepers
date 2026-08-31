@@ -19,7 +19,10 @@ namespace CoreKeepers
         Whirlwind,
         ShieldBash,
         BattleCharge,
-        Earthshatter
+        Earthshatter,
+        CastProjectile,
+        CastSpellUp,
+        CastSpellAround
     }
     public enum ContextInteraction : byte { None, AttackEnemy, MineResource, BuildOrRepair, RevivePlayer, DepositResources }
     public enum CorePlayerClass : byte { Warrior, Mage, Builder, Healer }
@@ -75,6 +78,8 @@ namespace CoreKeepers
         private readonly NetworkVariable<float> maximumHealth = new(100f);
         private readonly NetworkVariable<FixedString64Bytes> nickname = new(new FixedString64Bytes("Player"));
         private readonly NetworkVariable<bool> downed = new(false);
+        private readonly NetworkVariable<bool> burning = new(false);
+        private readonly NetworkVariable<EnemyDebuff> activeDebuffs = new(EnemyDebuff.None);
         private readonly NetworkVariable<int> reviveProgress = new(0);
         private readonly NetworkVariable<ulong> resurrectorId = new(NoResurrector);
         private readonly NetworkVariable<double> resurrectionStartedAt = new(0d);
@@ -105,6 +110,11 @@ namespace CoreKeepers
         private float externalDamageMultiplier = 1f;
         private double externalResistanceEndsAt;
         private float externalResistance;
+        private double burningEndsAt;
+        private double nextBurnDamageAt;
+        private float burningDamagePerSecond;
+        private readonly double[] debuffEndsAt = new double[6];
+        private double nextPoisonDamageAt;
         private bool leapMovementActive;
         private bool whirlwindMovementActive;
         private Quaternion whirlwindStartRotation;
@@ -128,6 +138,8 @@ namespace CoreKeepers
         public CorePlayerClass PlayerClass => syncedPlayerClass.Value;
         public float InteractionRange => interactionRange;
         public bool IsDowned => downed.Value;
+        public bool IsBurning => burning.Value;
+        public EnemyDebuff ActiveDebuffs => activeDebuffs.Value | (burning.Value ? EnemyDebuff.OnFire : EnemyDebuff.None);
         public int ReviveProgress => Mathf.RoundToInt(ResurrectionProgress * 100f);
         public bool IsBeingResurrected => resurrectorId.Value != NoResurrector;
         public float ResurrectionProgress
@@ -164,9 +176,16 @@ namespace CoreKeepers
 
         public override void OnNetworkSpawn()
         {
+            burning.OnValueChanged += OnBurningChanged;
             agent.enabled = IsOwner;
             if (IsServer)
             {
+                burning.Value = false;
+                burningEndsAt = 0d;
+                nextBurnDamageAt = 0d;
+                burningDamagePerSecond = 0f;
+                activeDebuffs.Value = EnemyDebuff.None;
+                System.Array.Clear(debuffEndsAt, 0, debuffEndsAt.Length);
                 syncedPlayerClass.Value = playerClass;
                 playerLevel.Value = startingLevel;
                 maximumHealth.Value = configuredMaximumHealth;
@@ -186,10 +205,13 @@ namespace CoreKeepers
             }
             heroSkills?.InitializeForMission();
             AttachPlayerMarker();
+            HeroCombatVfx.SetCharacterBurning(transform, burning.Value);
         }
 
         public override void OnNetworkDespawn()
         {
+            burning.OnValueChanged -= OnBurningChanged;
+            HeroCombatVfx.SetCharacterBurning(transform, false);
             if (IsServer) CancelResurrectionChannel();
             if (Local == this) Local = null;
         }
@@ -206,7 +228,11 @@ namespace CoreKeepers
             normalizedSpeed = Mathf.MoveTowards(normalizedSpeed, targetSpeed, smoothingRate * Time.deltaTime);
             previousPosition = transform.position;
             if (IsServer)
+            {
                 UpdateResurrectionChannel();
+                UpdateBurning();
+                UpdateDebuffs();
+            }
             if (IsServer && action.Value != WarriorAction.None && NetworkManager.ServerTime.Time >= actionEndsAt.Value)
             {
                 if (action.Value == WarriorAction.BattleCharge)
@@ -223,6 +249,8 @@ namespace CoreKeepers
                 CycleDebugClassRpc();
                 return;
             }
+            if (Keyboard.current != null && Keyboard.current.pKey.wasPressedThisFrame)
+                heroSkills?.TryGrantNextDebugLevel();
             if (downed.Value)
             {
                 if (agent != null && agent.enabled && agent.isOnNavMesh) agent.ResetPath();
@@ -256,7 +284,8 @@ namespace CoreKeepers
                     var direction = pointerRay.direction;
                     direction.y = 0f;
                     if (direction.sqrMagnitude < 0.01f) direction = transform.forward;
-                    var attackPoint = transform.position + direction.normalized * attackRange;
+                    var attackPoint = transform.position + direction.normalized *
+                        Mathf.Max(attackRange, heroSkills != null ? heroSkills.SelectedUseRange : attackRange);
                     StopForForcedAttack(attackPoint);
                     heroSkills?.TryUseSelectedInPlace(attackPoint);
                 }
@@ -267,10 +296,12 @@ namespace CoreKeepers
             if (player != null && player != this && player.IsDowned) { BeginInteraction(player.NetworkObject, ContextInteraction.RevivePlayer); return; }
             if (player == this) return;
             var enemy = hit.collider.GetComponentInParent<EnemyBrain>();
+            var dummy = hit.collider.GetComponentInParent<CoreDebugDummy>();
             if (IsShiftHeld())
             {
                 StopForForcedAttack(hit.point);
                 if (enemy != null) heroSkills?.TryUseSelectedOnTarget(enemy.NetworkObject);
+                else if (dummy != null) heroSkills?.TryUseSelectedOnTarget(dummy.NetworkObject);
                 else heroSkills?.TryUseSelectedInPlace(hit.point);
                 return;
             }
@@ -279,7 +310,6 @@ namespace CoreKeepers
                 BeginInteraction(enemy.NetworkObject, ContextInteraction.AttackEnemy);
                 return;
             }
-            var dummy = hit.collider.GetComponentInParent<CoreDebugDummy>();
             if (dummy != null) { BeginInteraction(dummy.NetworkObject, ContextInteraction.AttackEnemy); return; }
             var resource = hit.collider.GetComponentInParent<CoreDebugResourceNode>();
             if (resource != null) { BeginInteraction(resource.NetworkObject, ContextInteraction.MineResource); return; }
@@ -370,7 +400,9 @@ namespace CoreKeepers
         }
         private float GetRange(ContextInteraction type) => type switch
         {
-            ContextInteraction.AttackEnemy => heroSkills != null ? Mathf.Max(0.5f, heroSkills.SelectedUseRange) : attackRange,
+            ContextInteraction.AttackEnemy => heroSkills != null
+                ? Mathf.Max(0.5f, heroSkills.SelectedApproachRange)
+                : attackRange,
             ContextInteraction.MineResource => mineRange,
             ContextInteraction.BuildOrRepair => buildRange,
             _ => interactionRange
@@ -484,6 +516,86 @@ namespace CoreKeepers
         {
             if (!IsServer || duration <= 0f) return;
             BeginServerAction(requested, duration);
+        }
+
+        public void ServerPresentSkill(HeroSkillDefinition skill, Vector3 point, NetworkObject target)
+        {
+            if (!IsServer || skill == null) return;
+            var presentationAction = skill.Effect switch
+            {
+                HeroSkillEffect.SingleProjectile or HeroSkillEffect.ExplodingProjectile or
+                    HeroSkillEffect.ChainDamage => WarriorAction.CastProjectile,
+                HeroSkillEffect.RadialDamage or HeroSkillEffect.RadialDebuff or HeroSkillEffect.HolyPulse or
+                    HeroSkillEffect.RepairPulse or HeroSkillEffect.ConstructionAura => WarriorAction.CastSpellAround,
+                HeroSkillEffect.GroundImpact or HeroSkillEffect.Vortex or HeroSkillEffect.HealingArea or
+                    HeroSkillEffect.Sanctuary or HeroSkillEffect.BuildingBuff or HeroSkillEffect.CleanseWard or
+                    HeroSkillEffect.CoreMend or HeroSkillEffect.DivineIntervention or HeroSkillEffect.SelfBuff or
+                    HeroSkillEffect.Taunt or HeroSkillEffect.Blink => WarriorAction.CastSpellUp,
+                _ => WarriorAction.None
+            };
+            if (presentationAction != WarriorAction.None &&
+                action.Value is not (WarriorAction.Whirlwind or WarriorAction.ShieldBash or
+                    WarriorAction.BattleCharge or WarriorAction.Earthshatter))
+                BeginServerAction(presentationAction, presentationAction == WarriorAction.CastProjectile ? 0.72f : 0.9f);
+
+            var origin = GetSkillOrigin(presentationAction == WarriorAction.CastProjectile);
+            if (skill.StableId == 101)
+            {
+                var aimPoint = target != null ? target.transform.position + Vector3.up * 0.75f : point + Vector3.up * 0.75f;
+                var direction = aimPoint - origin;
+                if (direction.sqrMagnitude < 0.001f) direction = transform.forward;
+                point = origin + direction.normalized * Mathf.Max(1f, skill.Radius);
+                target = null;
+            }
+            else if (skill.StableId == 103)
+            {
+                point = transform.position;
+                target = null;
+            }
+            PresentSkillRpc(skill.StableId, origin, point, target != null,
+                target != null ? new NetworkObjectReference(target) : default);
+        }
+
+        private Vector3 GetSkillOrigin(bool fromHand)
+        {
+            if (fromHand)
+            {
+                foreach (var child in GetComponentsInChildren<Transform>(true))
+                    if (child.name == "RHand")
+                        return child.position + transform.forward * 0.2f;
+            }
+            return transform.position + Vector3.up * 1.05f;
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void PresentSkillRpc(int stableId, Vector3 origin, Vector3 point, bool hasTarget,
+            NetworkObjectReference targetReference)
+        {
+            Transform targetTransform = null;
+            if (hasTarget && targetReference.TryGet(out var target)) targetTransform = target.transform;
+            HeroCombatVfx.PlaySkill(HeroSkillCatalog.Find(stableId), origin, point, targetTransform);
+        }
+
+        public void ServerPresentProjectileImpact(int stableId, Vector3 position, Vector3 direction)
+        {
+            if (IsServer) PresentProjectileImpactRpc(stableId, position, direction);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void PresentProjectileImpactRpc(int stableId, Vector3 position, Vector3 direction)
+        {
+            HeroCombatVfx.PlayProjectileImpact(stableId, position, direction);
+        }
+
+        public void ServerDismissProjectile(int stableId, Vector3 position, Vector3 direction)
+        {
+            if (IsServer) DismissProjectileRpc(stableId, position, direction);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void DismissProjectileRpc(int stableId, Vector3 position, Vector3 direction)
+        {
+            HeroCombatVfx.DismissProjectile(stableId, position, direction);
         }
 
         public bool ServerBeginLeap(Vector3 destination, float duration)
@@ -682,6 +794,80 @@ namespace CoreKeepers
                 EnterDownedState();
         }
 
+        public void ServerIgnite(float duration, float damagePerSecond)
+        {
+            if (!IsServer || downed.Value || duration <= 0f || damagePerSecond <= 0f || HasStatusProtection)
+                return;
+            var now = NetworkManager.ServerTime.Time;
+            burningEndsAt = System.Math.Max(burningEndsAt, now + duration);
+            burningDamagePerSecond = Mathf.Max(burningDamagePerSecond, damagePerSecond);
+            if (!burning.Value)
+            {
+                burning.Value = true;
+                nextBurnDamageAt = now + 1d;
+            }
+        }
+
+        public void ServerApplyDebuff(EnemyDebuff debuff, float duration)
+        {
+            if (!IsServer || downed.Value || debuff == EnemyDebuff.None || duration <= 0f ||
+                HasStatusProtection || (heroSkills != null && heroSkills.IsCrowdControlImmune)) return;
+            if (debuff == EnemyDebuff.OnFire)
+            {
+                ServerIgnite(duration, 3f);
+                return;
+            }
+            var index = HeroDebuffIndex(debuff);
+            if (index < 0) return;
+            activeDebuffs.Value |= debuff;
+            debuffEndsAt[index] = System.Math.Max(debuffEndsAt[index], NetworkManager.ServerTime.Time + duration);
+            if (debuff == EnemyDebuff.Poisoned && nextPoisonDamageAt <= 0d)
+                nextPoisonDamageAt = NetworkManager.ServerTime.Time + 1d;
+        }
+
+        private void UpdateBurning()
+        {
+            if (!burning.Value) return;
+            var now = NetworkManager.ServerTime.Time;
+            if (downed.Value || now >= burningEndsAt)
+            {
+                burning.Value = false;
+                burningDamagePerSecond = 0f;
+                return;
+            }
+            if (now < nextBurnDamageAt) return;
+            nextBurnDamageAt = now + 1d;
+            TakeDamage(burningDamagePerSecond);
+        }
+
+        private void UpdateDebuffs()
+        {
+            if (activeDebuffs.Value == EnemyDebuff.None) return;
+            var now = NetworkManager.ServerTime.Time;
+            for (var index = 0; index < debuffEndsAt.Length; index++)
+            {
+                var flag = (EnemyDebuff)(1 << index);
+                if ((activeDebuffs.Value & flag) == 0 || now < debuffEndsAt[index]) continue;
+                activeDebuffs.Value &= ~flag;
+            }
+            if ((activeDebuffs.Value & EnemyDebuff.Poisoned) != 0 && now >= nextPoisonDamageAt)
+            {
+                nextPoisonDamageAt = now + 1d;
+                TakeDamage(1f);
+            }
+            if ((activeDebuffs.Value & EnemyDebuff.Poisoned) == 0) nextPoisonDamageAt = 0d;
+        }
+
+        private static int HeroDebuffIndex(EnemyDebuff debuff)
+        {
+            for (var index = 0; index < 6; index++)
+                if (debuff == (EnemyDebuff)(1 << index)) return index;
+            return -1;
+        }
+
+        private void OnBurningChanged(bool previous, bool current) =>
+            HeroCombatVfx.SetCharacterBurning(transform, current);
+
         public void ServerHeal(float amount)
         {
             if (!IsServer || downed.Value || amount <= 0f) return;
@@ -772,6 +958,19 @@ namespace CoreKeepers
         private void ChooseSkillRpc(int stableId, int wave)
         {
             heroSkills?.ServerChoose(HeroSkillCatalog.Find(stableId), wave);
+        }
+
+        public void RequestDebugSkillLevel(int wave)
+        {
+            if (IsOwner) GrantDebugSkillLevelRpc(wave);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void GrantDebugSkillLevelRpc(int wave)
+        {
+            if (SceneManager.GetActiveScene().name != CoreSessionManager.DebugSceneName ||
+                heroSkills == null || !heroSkills.ServerGrantDebugLevel(wave)) return;
+            playerLevel.Value = Mathf.Max(playerLevel.Value, startingLevel + wave);
         }
 
         public void RequestSkillUse(int stableId, Vector3 point, NetworkObject target)

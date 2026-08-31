@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.UI;
 
 namespace CoreKeepers
@@ -38,6 +39,14 @@ namespace CoreKeepers
         [Header("Timing")]
         [SerializeField, Min(0.1f)] private float preparationDuration = 60f;
         [SerializeField, Min(0.1f)] private float waveReleaseDuration = 30f;
+
+        [Header("Global Loot Goblin")]
+        [SerializeField] private GameObject lootGoblinPrefab;
+        [SerializeField, Range(0f, 1f)] private float lootGoblinChance = 0.3f;
+        [SerializeField, Min(0f)] private float lootGoblinSpawnDelayMin = 90f;
+        [SerializeField, Min(0f)] private float lootGoblinSpawnDelayMax = 240f;
+        [SerializeField, Min(1f)] private float lootGoblinSpawnRadiusMin = 6f;
+        [SerializeField, Min(1f)] private float lootGoblinSpawnRadiusMax = 10f;
 
         [Header("Spawn Zones")]
         [SerializeField] private List<CoreEnemySpawnZone> spawnZones = new();
@@ -77,6 +86,9 @@ namespace CoreKeepers
         private int spawnZoneIndex;
         private double nextSpawnAt;
         private double releaseStartedAt;
+        private bool lootGoblinPending;
+        private double lootGoblinSpawnAt;
+        private EnemyBrain activeLootGoblin;
 
         public CoreWavePhase Phase => phase.Value;
         public int CurrentWaveNumber => currentWave.Value + 1;
@@ -124,6 +136,7 @@ namespace CoreKeepers
 
             missionNumber.Value = oneBasedMissionNumber;
             bossMission.Value = activeMission.HasBoss;
+            ScheduleLootGoblin();
             BeginPreparation(0);
         }
 
@@ -136,6 +149,7 @@ namespace CoreKeepers
         private void UpdateServerMission()
         {
             var now = NetworkManager.ServerTime.Time;
+            UpdateLootGoblin(now);
             switch (phase.Value)
             {
                 case CoreWavePhase.Preparation:
@@ -154,6 +168,68 @@ namespace CoreKeepers
                     TryCompleteWave();
                     break;
             }
+        }
+
+        private void ScheduleLootGoblin()
+        {
+            lootGoblinPending = UnityEngine.Random.value < lootGoblinChance;
+            if (!lootGoblinPending) return;
+            var minimum = Mathf.Min(lootGoblinSpawnDelayMin, lootGoblinSpawnDelayMax);
+            var maximum = Mathf.Max(lootGoblinSpawnDelayMin, lootGoblinSpawnDelayMax);
+            lootGoblinSpawnAt = NetworkManager.ServerTime.Time + UnityEngine.Random.Range(minimum, maximum);
+        }
+
+        private void UpdateLootGoblin(double now)
+        {
+            if (!lootGoblinPending || now < lootGoblinSpawnAt || phase.Value is CoreWavePhase.Disabled or CoreWavePhase.Completed)
+                return;
+            if (TrySpawnLootGoblin())
+                lootGoblinPending = false;
+            else
+                lootGoblinSpawnAt = now + 5d;
+        }
+
+        private bool TrySpawnLootGoblin()
+        {
+            lootGoblinPrefab ??= Resources.Load<GameObject>("Enemies/Chest");
+            if (lootGoblinPrefab == null)
+            {
+                Debug.LogError("Global loot goblin requires Resources/Enemies/Chest.prefab.", this);
+                lootGoblinPending = false;
+                return false;
+            }
+            if (lootGoblinPrefab.GetComponent<NetworkObject>() == null ||
+                !NetworkManager.NetworkConfig.Prefabs.Contains(lootGoblinPrefab))
+            {
+                Debug.LogError("Chest loot goblin is not registered as a NetworkPrefab.", lootGoblinPrefab);
+                lootGoblinPending = false;
+                return false;
+            }
+
+            var heroes = new List<NetworkWarrior>();
+            foreach (var hero in FindObjectsByType<NetworkWarrior>())
+                if (hero.IsSpawned && !hero.IsDowned) heroes.Add(hero);
+            if (heroes.Count == 0) return false;
+            var chosen = heroes[UnityEngine.Random.Range(0, heroes.Count)];
+            var minimum = Mathf.Min(lootGoblinSpawnRadiusMin, lootGoblinSpawnRadiusMax);
+            var maximum = Mathf.Max(lootGoblinSpawnRadiusMin, lootGoblinSpawnRadiusMax);
+            for (var attempt = 0; attempt < 12; attempt++)
+            {
+                var direction = UnityEngine.Random.insideUnitCircle.normalized;
+                var candidate = chosen.transform.position +
+                    new Vector3(direction.x, 0f, direction.y) * UnityEngine.Random.Range(minimum, maximum);
+                if (!NavMesh.SamplePosition(candidate, out var hit, 3f, NavMesh.AllAreas)) continue;
+                var away = hit.position - chosen.transform.position;
+                away.y = 0f;
+                var rotation = away.sqrMagnitude > 0.001f
+                    ? Quaternion.LookRotation(away.normalized)
+                    : Quaternion.identity;
+                var instance = Instantiate(lootGoblinPrefab, hit.position, rotation);
+                instance.GetComponent<NetworkObject>().Spawn(true);
+                activeLootGoblin = instance.GetComponent<EnemyBrain>();
+                return activeLootGoblin != null;
+            }
+            return false;
         }
 
         private void BeginPreparation(int waveIndex)
@@ -365,6 +441,10 @@ namespace CoreKeepers
 
         private void ResetRuntimeState()
         {
+            if (activeLootGoblin != null && activeLootGoblin.IsSpawned)
+                activeLootGoblin.NetworkObject.Despawn(true);
+            activeLootGoblin = null;
+            lootGoblinPending = false;
             releaseQueue.Clear();
             activeEnemies.Clear();
             releaseIndex = 0;

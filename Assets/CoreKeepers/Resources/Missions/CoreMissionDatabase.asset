@@ -13,273 +13,1363 @@ MonoBehaviour:
   m_Name: CoreMissionDatabase
   m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.CoreMissionWaveDatabase
   missions:
-  - displayName: Mission 1
+  - displayName: Wildwood Edge
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 3
+  - displayName: Feral Trail
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 3
+  - displayName: Orc Warcamp
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 5
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 1
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2613834189886003858, guid: b95fe2dee884cef46bff1e40f5b3b76a, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 3
+  - displayName: Heart of the Wilds
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 5
+    - enemies:
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 5583236461179569619, guid: af915fbb2cf0ab44381067f110d99135, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 6062113671338260631, guid: 5efb85553c2e54540a15cc8fa14ae2d7, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+  - displayName: Troll's Domain
+    hasBoss: 1
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 7729077240080201913, guid: fd8d7563b43563242b4b55a957ed946b, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2561319334591796921, guid: 0ef878f000388974b96da4914ce98873, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7054194640726588256, guid: c8d8c8ab9b53572489ea328e10e5dbcb, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3085772689689992170, guid: d443353aa4f45b9448d67f05a94865e4, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 8821771458131852276, guid: 1f91d17a73534934db8a1c16d8c89a61, type: 3}
+        amount: 1
+  - displayName: Restless Graves
     hasBoss: 0
     waves:
     - enemies:
       - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
-        amount: 1
+        amount: 4
     - enemies:
       - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
-        amount: 1
+        amount: 4
       - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
         amount: 1
     - enemies:
       - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
-        amount: 1
+        amount: 4
       - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
         amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 2
+  - displayName: Hollow Crypt
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 5
+    - enemies:
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 7
+  - displayName: Night of Bats
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 7
+    - enemies:
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 5563554593138185481, guid: 9c00a6e996492b64a9dadf3ab216d686, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 3
+  - displayName: Banshee's Wake
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 5
+    - enemies:
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8268760994061365761, guid: d6ff455b9eb7e454fbf67ff7133c6a2c, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7422231066753033955, guid: 50e645fa1caeed240973969d40ab1968, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 3
+  - displayName: The Wailing Queen
+    hasBoss: 1
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 5
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 4036495999104550889, guid: cc6838aae2706014c8ad5cc85b3cabce, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3473963378644533016, guid: 1375465f0afa4614fb37e172a33cfb45, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7959750003563959320, guid: d4c1f41bd380b4b4382ce29aec4086c3, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 8624493603909013194, guid: 87b197a2adc174547932aa231e4a9125, type: 3}
+        amount: 1
+  - displayName: Kingdom's Border
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 6
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 5
+  - displayName: The Fallen Keep
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 5
       - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
         amount: 1
     - enemies:
-      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2874266522317378082, guid: 43c3d27ee51044941bf3f94732f4ca00, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 5
+  - displayName: Blood Court
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 6
+    - enemies:
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
         amount: 1
     - enemies:
-      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 1
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
         amount: 1
     - enemies:
-      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 994462596557536680, guid: fb0a4686c4c6cc04d98e87d54bf42a28, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 5
+  - displayName: Cyclopean Gate
+    hasBoss: 0
+    waves:
+    - enemies:
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
         amount: 1
     - enemies:
-      - enemyPrefab: {fileID: 8362368255033878412, guid: 9fb04cd89b323f342910537556fd6d89, type: 3}
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
         amount: 1
-  - displayName: Mission 2
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 3
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 4
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 5
+    - enemies:
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 1
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 8388690095560618714, guid: e9d0a2722adce0b4a93278e12aa6e5c6, type: 3}
+        amount: 5
+  - displayName: The One-Eyed Throne
     hasBoss: 1
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 6
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 7
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2519200745764696609, guid: c73e3ceea9496ae4d839a387033c8b1f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 5715092364165433707, guid: 89c680166b2d50747810ad9e6bd99bb2, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 4248360952053328476, guid: 6c6842900f7e2d442800e8bfb5285823, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 2395938773100924687, guid: fe6d4d05ba1eeb24faf5b76d91cb31aa, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 5368377992952484870, guid: 2f21b1f0dc27afe458bc6a5ada90ddfb, type: 3}
+        amount: 1
+  - displayName: Marsh Edge
     hasBoss: 0
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 7
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 11
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 9
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 9
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 6
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 9
+  - displayName: Toxic Pools
     hasBoss: 0
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 8
+    - enemies:
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 7
+    - enemies:
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 9
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 9
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 6
+  - displayName: Vermin Nest
     hasBoss: 0
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 9
+    - enemies:
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 8
+    - enemies:
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 5
+    - enemies:
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 6
+  - displayName: Witchwater
     hasBoss: 0
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 10
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 12
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 10
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 9
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 10
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 9
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 5671020394457954590, guid: 71444a1f201e45d42b86aa68ed8af325, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2062459884743810910, guid: 07b43978737d0ec49b1cbc1f6a3d4540, type: 3}
+        amount: 9
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 6
+  - displayName: The Sunken Coven
     hasBoss: 1
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 11
+    - enemies:
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 8
+    - enemies:
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 2511492772423153136, guid: 8b361d7fae534914e8cd6be8405c9a54, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 7505885468836599489, guid: 516c94e2eb71bda4598d892f4d8c427b, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 462332818075324902, guid: a2dbba120774d8449a06614d3b2fde72, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 2082423714052775915, guid: da17f013dcd112c44bff5962c68a9cfc, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 6448242934690035222, guid: 5793ce11f95fdcc43bbff64f01341947, type: 3}
+        amount: 1
+  - displayName: Emberfrost
     hasBoss: 0
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 12
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 7
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 5
+  - displayName: Tempest Spires
     hasBoss: 0
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 13
+    - enemies:
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 9
+    - enemies:
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 8
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 5
+  - displayName: Elemental Clash
     hasBoss: 0
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 14
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 7
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 3400554776628596032, guid: d62ba8920feac7647aabae8600e48dfd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 5
+  - displayName: Warlock's Gate
     hasBoss: 0
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 15
+    - enemies:
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 7
+    - enemies:
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 5
+    - enemies:
+      - enemyPrefab: {fileID: 1877397836720257819, guid: dd5d42b8f85bb5446bd2b2d80f263914, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 7
+  - displayName: The Riftmaster
     hasBoss: 1
     waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 16
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 17
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 18
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 19
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 20
-    hasBoss: 1
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 21
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 22
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 23
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 24
-    hasBoss: 0
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-  - displayName: Mission 25
-    hasBoss: 1
-    waves:
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
-    - enemies: []
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 7
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 7
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 1
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 2
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 3
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 3
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 4
+    - enemies:
+      - enemyPrefab: {fileID: 4314812344713513828, guid: 0081f121528b37c448c8e4cd1c17963f, type: 3}
+        amount: 4
+      - enemyPrefab: {fileID: 1828831868876181557, guid: 5b53abb6e621bbd49a1b1897626d841f, type: 3}
+        amount: 6
+      - enemyPrefab: {fileID: 8885074962671018312, guid: 0b172c554594d0447ba4e9ad5d385b48, type: 3}
+        amount: 2
+      - enemyPrefab: {fileID: 6742394359605960651, guid: 9df06b5c417c95144854b4f3c7a859fd, type: 3}
+        amount: 5
+      - enemyPrefab: {fileID: 285902934073365152, guid: 741e73bb255ba8e40bd2bdcd8d96dfe1, type: 3}
+        amount: 1

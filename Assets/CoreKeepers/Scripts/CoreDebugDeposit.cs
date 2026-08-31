@@ -5,7 +5,7 @@ namespace CoreKeepers
 {
     public sealed class CoreDebugDeposit : NetworkBehaviour
     {
-        [SerializeField, Min(1f)] private float configuredMaximumHealth = 1000f;
+        [SerializeField, Min(1f)] private float configuredMaximumHealth = 1500f;
         [Header("Debug Starting Resources")]
         [SerializeField, Min(0)] private int startingOre = 1000;
         [SerializeField, Min(0)] private int startingCoreShards = 1000;
@@ -37,7 +37,7 @@ namespace CoreKeepers
                 return;
             depositedOre.Value = startingOre;
             depositedCoreShards.Value = startingCoreShards;
-            maximumHealth.Value = configuredMaximumHealth;
+            maximumHealth.Value = Mathf.Max(1500f, configuredMaximumHealth);
             currentHealth.Value = maximumHealth.Value;
         }
 

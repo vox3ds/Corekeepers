@@ -51,6 +51,7 @@ namespace CoreKeepers
         [SerializeField] private bool canPassThroughBarricades;
         [SerializeField] private bool assassin;
         [SerializeField] private bool coreOnly;
+        [SerializeField] private bool lootGoblin;
 
         [Header("Combat")]
         [SerializeField] private CoreEnemyType enemyType;
@@ -63,6 +64,11 @@ namespace CoreKeepers
         [SerializeField, Min(0f)] private float heroAggroDuration = 10f;
         [SerializeField, Min(0f)] private float tauntDuration = 15f;
         [SerializeField, Min(0.05f)] private float deathAnimationDuration = 1.1f;
+
+        [Header("Loot Goblin")]
+        [SerializeField, Min(1f)] private float lootGoblinEscapeDuration = 35f;
+        [SerializeField, Min(1f)] private float lootGoblinFleeDistance = 8f;
+        [SerializeField, Min(0.05f)] private float lootGoblinPathRefreshInterval = 0.35f;
 
         [Header("Physics Roll")]
         [SerializeField] private GameObject explosionEffectPrefab;
@@ -112,6 +118,8 @@ namespace CoreKeepers
         private double nextFireTickAt;
         private double nextPoisonTickAt;
         private double despawnAt;
+        private double lootGoblinEscapeAt;
+        private double nextLootGoblinPathAt;
         private Vector3 previousPosition;
         private float normalizedSpeed;
         private bool nextAttackUsesRightHand;
@@ -134,6 +142,7 @@ namespace CoreKeepers
         public bool CanPassThroughBarricades => canPassThroughBarricades;
         public bool IsAssassin => assassin;
         public bool IsCoreOnly => coreOnly;
+        public bool IsLootGoblin => lootGoblin;
         public EnemyDebuff ActiveDebuffs => debuffs.Value;
         public EnemyAnimationState CurrentAnimation => animationState.Value;
         public float NormalizedSpeed => normalizedSpeed;
@@ -174,7 +183,10 @@ namespace CoreKeepers
                 agent.speed = movementSpeed;
                 agent.stoppingDistance = attackRange * 0.85f;
             }
-            FindAndSetCore();
+            if (lootGoblin)
+                lootGoblinEscapeAt = NetworkManager.ServerTime.Time + lootGoblinEscapeDuration;
+            else
+                FindAndSetCore();
         }
 
         private void Update()
@@ -193,6 +205,12 @@ namespace CoreKeepers
                 return;
             }
 
+            if (lootGoblin && now >= lootGoblinEscapeAt)
+            {
+                if (NetworkObject.IsSpawned) NetworkObject.Despawn(true);
+                return;
+            }
+
             UpdatePendingProjectile(now);
 
             if (animationState.Value != EnemyAnimationState.Idle && now >= animationEndsAt.Value)
@@ -201,6 +219,12 @@ namespace CoreKeepers
             {
                 if (agent.enabled) agent.isStopped = true;
                 rollingDirection = Vector3.zero;
+                return;
+            }
+
+            if (lootGoblin)
+            {
+                FleeFromHeroes(now);
                 return;
             }
 
@@ -248,6 +272,47 @@ namespace CoreKeepers
                 return;
             }
             rollingDirection = offset.normalized;
+        }
+
+        private void FleeFromHeroes(double now)
+        {
+            if (!agent.enabled || !agent.isOnNavMesh)
+                return;
+            agent.isStopped = false;
+            ApplyMovementSpeed();
+            if (now < nextLootGoblinPathAt)
+                return;
+            nextLootGoblinPathAt = now + lootGoblinPathRefreshInterval;
+
+            NetworkWarrior nearest = null;
+            var nearestSqr = float.MaxValue;
+            foreach (var hero in FindObjectsByType<NetworkWarrior>())
+            {
+                if (!hero.IsSpawned || hero.IsDowned) continue;
+                var offset = transform.position - hero.transform.position;
+                offset.y = 0f;
+                if (offset.sqrMagnitude >= nearestSqr) continue;
+                nearestSqr = offset.sqrMagnitude;
+                nearest = hero;
+            }
+            if (nearest == null)
+            {
+                agent.ResetPath();
+                return;
+            }
+
+            var direction = transform.position - nearest.transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.01f)
+            {
+                var random = Random.insideUnitCircle.normalized;
+                direction = new Vector3(random.x, 0f, random.y);
+            }
+            direction.Normalize();
+            var sideways = Vector3.Cross(Vector3.up, direction) * Random.Range(-0.35f, 0.35f);
+            var candidate = transform.position + (direction + sideways).normalized * lootGoblinFleeDistance;
+            if (NavMesh.SamplePosition(candidate, out var hit, lootGoblinFleeDistance * 0.6f, NavMesh.AllAreas))
+                agent.SetDestination(hit.position);
         }
 
         private void UpdateMeasuredSpeed()
@@ -354,7 +419,11 @@ namespace CoreKeepers
             var targetPoint = ClosestTargetPoint(currentTarget);
             var offset = targetPoint - transform.position;
             offset.y = 0f;
-            if (offset.magnitude > attackRange)
+            // ClosestTargetPoint is measured from the agent's centre to the target surface.
+            // Include the agent body radius so avoidance cannot leave it stranded just outside
+            // the nominal attack range, especially around the large Core collider.
+            var effectiveAttackRange = attackRange + agent.radius;
+            if (offset.magnitude > effectiveAttackRange)
             {
                 if (agent.isOnNavMesh)
                     agent.SetDestination(targetPoint);
@@ -532,12 +601,13 @@ namespace CoreKeepers
                 return;
             }
             PlayAnimation(EnemyAnimationState.TakeHit, 0.28f);
-            if (attacker != null && !forcedByTaunt)
+            if (!lootGoblin && attacker != null && !forcedByTaunt)
                 ForceHero(attacker, heroAggroDuration, false);
         }
 
         public void ApplyTaunt(NetworkWarrior hero, float duration = -1f)
         {
+            if (lootGoblin) return;
             if (!IsServer || hero == null || coreOnly)
                 return;
             ForceHero(hero, duration > 0f ? duration : tauntDuration, true);
