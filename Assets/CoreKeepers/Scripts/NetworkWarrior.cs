@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -43,6 +44,7 @@ namespace CoreKeepers
         [SerializeField, Min(0.01f)] private float heldCommandInterval = 0.05f;
         [SerializeField, Min(0.01f)] private float groundRetargetDistance = 0.15f;
         [SerializeField] private CorePlayerClass playerClass = CorePlayerClass.Warrior;
+        [SerializeField] private Material arcaneMageMaterial;
         [Header("Attack")]
         [SerializeField, Min(0.05f)] private float attackDuration = 0.62f;
         [SerializeField, Min(0f)] private float attackCooldown = 0.72f;
@@ -86,6 +88,8 @@ namespace CoreKeepers
         private readonly NetworkVariable<double> resurrectionEndsAt = new(0d);
         private readonly NetworkVariable<Vector3> leapStart = new(Vector3.zero);
         private readonly NetworkVariable<Vector3> leapEnd = new(Vector3.zero);
+        private readonly NetworkVariable<double> arcaneSpeedEndsAt = new(0d);
+        private readonly NetworkVariable<float> arcaneSpeedMultiplier = new(1f);
         private NavMeshAgent agent;
         private NetworkObject interactionTarget;
         private ContextInteraction interaction;
@@ -118,6 +122,10 @@ namespace CoreKeepers
         private bool leapMovementActive;
         private bool whirlwindMovementActive;
         private Quaternion whirlwindStartRotation;
+        private readonly Dictionary<Renderer, Material[]> arcaneOriginalMaterials = new();
+        private readonly List<TrailRenderer> arcaneTrails = new();
+        private Material arcaneTrailMaterial;
+        private bool arcaneSpeedVisualActive;
         private static int lastDebugClassSwitchFrame = -1;
 
         public static NetworkWarrior Local { get; private set; }
@@ -138,6 +146,8 @@ namespace CoreKeepers
         public CorePlayerClass PlayerClass => syncedPlayerClass.Value;
         public float InteractionRange => interactionRange;
         public bool IsDowned => downed.Value;
+        public bool IsArcaneSpeedActive => IsSpawned && NetworkManager != null &&
+            NetworkManager.ServerTime.Time < arcaneSpeedEndsAt.Value;
         public bool IsBurning => burning.Value;
         public EnemyDebuff ActiveDebuffs => activeDebuffs.Value | (burning.Value ? EnemyDebuff.OnFire : EnemyDebuff.None);
         public int ReviveProgress => Mathf.RoundToInt(ResurrectionProgress * 100f);
@@ -180,6 +190,8 @@ namespace CoreKeepers
             agent.enabled = IsOwner;
             if (IsServer)
             {
+                arcaneSpeedEndsAt.Value = 0d;
+                arcaneSpeedMultiplier.Value = 1f;
                 burning.Value = false;
                 burningEndsAt = 0d;
                 nextBurnDamageAt = 0d;
@@ -212,12 +224,15 @@ namespace CoreKeepers
         {
             burning.OnValueChanged -= OnBurningChanged;
             HeroCombatVfx.SetCharacterBurning(transform, false);
+            SetArcaneSpeedVisual(false);
+            if (agent != null) agent.speed = movementSpeed;
             if (IsServer) CancelResurrectionChannel();
             if (Local == this) Local = null;
         }
 
         private void Update()
         {
+            UpdateArcaneSpeed();
             var delta = transform.position - previousPosition;
             delta.y = 0f;
             var measuredSpeed = delta.magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
@@ -576,6 +591,17 @@ namespace CoreKeepers
             HeroCombatVfx.PlaySkill(HeroSkillCatalog.Find(stableId), origin, point, targetTransform);
         }
 
+        public void ServerPresentChainLightning(Vector3 start, Vector3 end)
+        {
+            if (IsServer) PresentChainLightningRpc(start, end);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        private void PresentChainLightningRpc(Vector3 start, Vector3 end)
+        {
+            HeroCombatVfx.PlayChainLightningSegment(start, end);
+        }
+
         public void ServerPresentProjectileImpact(int stableId, Vector3 position, Vector3 direction)
         {
             if (IsServer) PresentProjectileImpactRpc(stableId, position, direction);
@@ -923,6 +949,108 @@ namespace CoreKeepers
             if (!IsServer) return;
             workSpeedMultiplier = Mathf.Max(workSpeedMultiplier, multiplier);
             workSpeedEndsAt = System.Math.Max(workSpeedEndsAt, NetworkManager.ServerTime.Time + duration);
+        }
+
+        public void ServerGrantArcaneSpeed(float multiplier, float duration)
+        {
+            if (!IsServer || duration <= 0f) return;
+            arcaneSpeedMultiplier.Value = Mathf.Max(1f, multiplier);
+            arcaneSpeedEndsAt.Value = System.Math.Max(arcaneSpeedEndsAt.Value,
+                NetworkManager.ServerTime.Time + duration);
+        }
+
+        private void UpdateArcaneSpeed()
+        {
+            var active = IsArcaneSpeedActive;
+            if (IsOwner && agent != null)
+                agent.speed = movementSpeed * (active ? Mathf.Max(1f, arcaneSpeedMultiplier.Value) : 1f);
+            if (active != arcaneSpeedVisualActive) SetArcaneSpeedVisual(active);
+        }
+
+        private void SetArcaneSpeedVisual(bool active)
+        {
+            arcaneSpeedVisualActive = active;
+            if (active)
+            {
+                EnsureArcaneVisuals();
+                if (arcaneMageMaterial != null)
+                    foreach (var entry in arcaneOriginalMaterials)
+                    {
+                        var materials = new Material[entry.Value.Length];
+                        System.Array.Fill(materials, arcaneMageMaterial);
+                        entry.Key.sharedMaterials = materials;
+                    }
+            }
+            else
+            {
+                foreach (var entry in arcaneOriginalMaterials)
+                    if (entry.Key != null) entry.Key.sharedMaterials = entry.Value;
+            }
+
+            foreach (var trail in arcaneTrails)
+            {
+                if (trail == null) continue;
+                trail.emitting = active;
+                if (!active) trail.Clear();
+            }
+        }
+
+        private void EnsureArcaneVisuals()
+        {
+            if (arcaneOriginalMaterials.Count > 0 || arcaneTrails.Count > 0) return;
+            arcaneTrailMaterial = HeroCombatVfx.CreateMaterial(new Color(0.62f, 0.12f, 1f, 0.9f), true, 5f);
+            foreach (var partName in new[] { "Head", "RHand", "LHand" })
+            {
+                var anchor = FindVisualPart(partName);
+                if (anchor == null) continue;
+                foreach (var partRenderer in anchor.GetComponentsInChildren<Renderer>(true))
+                    if (!arcaneOriginalMaterials.ContainsKey(partRenderer))
+                        arcaneOriginalMaterials.Add(partRenderer, partRenderer.sharedMaterials);
+
+                var trailObject = new GameObject($"Arcane Blink Trail - {partName}");
+                trailObject.transform.SetParent(anchor, false);
+                var trail = trailObject.AddComponent<TrailRenderer>();
+                trail.time = 0.42f;
+                trail.minVertexDistance = 0.04f;
+                trail.startWidth = partName == "Head" ? 0.24f : 0.16f;
+                trail.endWidth = 0.01f;
+                trail.numCornerVertices = 4;
+                trail.numCapVertices = 4;
+                trail.alignment = LineAlignment.View;
+                trail.textureMode = LineTextureMode.Stretch;
+                trail.colorGradient = PurpleTrailGradient();
+                trail.sharedMaterial = arcaneTrailMaterial;
+                trail.emitting = false;
+                arcaneTrails.Add(trail);
+            }
+        }
+
+        private Transform FindVisualPart(string partName)
+        {
+            foreach (var child in GetComponentsInChildren<Transform>(true))
+                if (string.Equals(child.name, partName, System.StringComparison.OrdinalIgnoreCase)) return child;
+            foreach (var child in GetComponentsInChildren<Transform>(true))
+                if (string.Equals(child.name, partName + "Visual", System.StringComparison.OrdinalIgnoreCase)) return child;
+            return null;
+        }
+
+        private static Gradient PurpleTrailGradient()
+        {
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(0.9f, 0.45f, 1f), 0f),
+                    new GradientColorKey(new Color(0.35f, 0.03f, 1f), 1f)
+                },
+                new[] { new GradientAlphaKey(0.95f, 0f), new GradientAlphaKey(0f, 1f) });
+            return gradient;
+        }
+
+        public override void OnDestroy()
+        {
+            if (arcaneTrailMaterial != null) Destroy(arcaneTrailMaterial);
+            base.OnDestroy();
         }
 
         public void ServerGrantDamageBonus(float multiplier, float duration)

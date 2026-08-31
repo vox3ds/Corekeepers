@@ -120,6 +120,8 @@ namespace CoreKeepers
         {
             if (hero.IsDowned)
                 return Loop("DeadLoop", 0.85f);
+            if (hero.IsArcaneSpeedActive)
+                return Loop("Float", 1f);
 
             var progress = hero.ActionProgress;
             switch (hero.CurrentAction)

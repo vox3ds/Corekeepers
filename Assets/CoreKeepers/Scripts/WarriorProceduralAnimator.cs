@@ -51,7 +51,8 @@ namespace CoreKeepers
         private WarriorAction previousAction;
         private bool impactVisualTriggered;
 
-        public string DisplayState => warrior == null ? "Unknown" : warrior.IsDowned ? "Downed" : warrior.CurrentAction != WarriorAction.None
+        public string DisplayState => warrior == null ? "Unknown" : warrior.IsDowned ? "Downed" : warrior.IsArcaneSpeedActive
+            ? "Float" : warrior.CurrentAction != WarriorAction.None
             ? warrior.CurrentAction.ToString()
             : warrior.NormalizedSpeed > 0.08f ? "Run" : "Idle";
 
@@ -118,6 +119,11 @@ namespace CoreKeepers
                 AnimateDowned(downedBlend);
                 return;
             }
+            if (warrior.IsArcaneSpeedActive)
+            {
+                AnimateFloating();
+                return;
+            }
             if (warrior.CurrentAction != WarriorAction.None)
                 AnimateAction(warrior.CurrentAction, warrior.ActionProgress);
             else
@@ -133,6 +139,8 @@ namespace CoreKeepers
         {
             var action = warrior.CurrentAction;
             var progress = warrior.ActionProgress;
+            if (warrior.IsArcaneSpeedActive)
+                return;
             if (swordTrail != null)
             {
                 swordTrail.emitting = !warrior.IsDowned && (action switch
@@ -191,6 +199,19 @@ namespace CoreKeepers
                 runWave * runHandTravel) * locomotionBlend;
             rightHand.localPosition += new Vector3(0f, -runWave * runHandTravel * 0.45f,
                 -runWave * runHandTravel) * locomotionBlend;
+        }
+
+        private void AnimateFloating()
+        {
+            idlePhase += Time.deltaTime * 2.1f;
+            var wave = Mathf.Sin(idlePhase);
+            if (body != null)
+                body.localPosition = bodyPosition + Vector3.up * (0.08f + wave * 0.06f);
+            head.localPosition += Vector3.up * (0.04f + wave * 0.025f);
+            leftHand.localPosition += new Vector3(0.08f, 0.08f - wave * 0.025f, 0.04f);
+            rightHand.localPosition += new Vector3(-0.08f, 0.08f + wave * 0.025f, 0.04f);
+            leftHand.localRotation = leftRotation * Quaternion.Euler(-18f, 0f, -12f);
+            rightHand.localRotation = rightRotation * Quaternion.Euler(-18f, 0f, 12f);
         }
 
         private void AnimateAction(WarriorAction state, float t)

@@ -65,12 +65,11 @@ namespace CoreKeepers
                         !isArcaneBolt, isArcaneBolt, isFireball, skill.Duration);
                     break;
                 case HeroSkillEffect.ChainDamage:
-                    SpawnLightning(origin, targetPoint, color);
+                    SpawnLightning(origin, targetPoint, color, 3f);
                     SpawnBurst(targetPoint, color, 0.65f, CombatVfxAtlas.EnergyExplosion8x8);
                     break;
                 case HeroSkillEffect.Blink:
-                    SpawnBurst(origin, color, 0.9f, CombatVfxAtlas.EnergyExplosion5x4);
-                    SpawnBurst(point + Vector3.up * 0.5f, color, 1.1f, CombatVfxAtlas.EnergyExplosion5x4);
+                    SpawnBurst(origin, color, 1.1f, CombatVfxAtlas.EnergyExplosion5x4);
                     break;
                 case HeroSkillEffect.GroundImpact:
                     SpawnRing(point, color, Mathf.Max(1f, skill.Radius), 0.8f);
@@ -131,7 +130,7 @@ namespace CoreKeepers
                 case CombatVfxPreview.FrostNova:
                     SpawnFrostNova(subject.position, 4.5f); break;
                 case CombatVfxPreview.ChainLightning:
-                    SpawnLightning(center, destination, Frost);
+                    SpawnLightning(center, destination, Frost, 3f);
                     SpawnBurst(destination, Frost, 0.7f, CombatVfxAtlas.EnergyExplosion8x8); break;
                 case CombatVfxPreview.Heal:
                     SpawnRing(subject.position, Holy, 3f, 0.9f);
@@ -651,10 +650,16 @@ namespace CoreKeepers
             root.AddComponent<CombatVfxRing>().Initialize(color, radius, lifetime, glowMultiplier);
         }
 
-        private static void SpawnLightning(Vector3 start, Vector3 end, Color color)
+        public static void PlayChainLightningSegment(Vector3 start, Vector3 end)
+        {
+            SpawnLightning(start, end, Arcane, 3f);
+            SpawnBurst(end, Arcane, 0.5f, CombatVfxAtlas.EnergyExplosion8x8);
+        }
+
+        private static void SpawnLightning(Vector3 start, Vector3 end, Color color, float glowScale = 1f)
         {
             var root = new GameObject("Combat VFX - Lightning");
-            root.AddComponent<CombatVfxLightning>().Initialize(start, end, color);
+            root.AddComponent<CombatVfxLightning>().Initialize(start, end, color, glowScale);
         }
 
         internal static Material CreateMaterial(Color color, bool particle = false, float glowMultiplier = 2.5f)
@@ -1182,7 +1187,7 @@ namespace CoreKeepers
         private Vector3 end;
         private float age;
 
-        public void Initialize(Vector3 requestedStart, Vector3 requestedEnd, Color color)
+        public void Initialize(Vector3 requestedStart, Vector3 requestedEnd, Color color, float glowScale)
         {
             start = requestedStart;
             end = requestedEnd;
@@ -1191,7 +1196,7 @@ namespace CoreKeepers
             line.widthMultiplier = 0.09f;
             line.startColor = color * 2f;
             line.endColor = Color.white;
-            material = HeroCombatVfx.CreateMaterial(color, true);
+            material = HeroCombatVfx.CreateMaterial(color, true, 2.5f * Mathf.Max(1f, glowScale));
             line.material = material;
         }
 

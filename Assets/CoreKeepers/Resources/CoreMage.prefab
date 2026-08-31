@@ -909,6 +909,7 @@ MonoBehaviour:
   heldCommandInterval: 0.05
   groundRetargetDistance: 0.15
   playerClass: 1
+  arcaneMageMaterial: {fileID: 2100000, guid: 2934e8e58de283f4db6ec58e25ea51c9, type: 2}
   attackDuration: 0.42
   attackCooldown: 1.5
   attackArc: 100

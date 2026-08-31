@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.AI;
 using UnityEngine.InputSystem;
 
 namespace CoreKeepers
@@ -461,7 +460,7 @@ namespace CoreKeepers
                     if (skill.StableId == 10) return BeginEarthshatter(skill);
                     return DamageAndDebuffRadius(skill, hero.transform.position);
                 case HeroSkillEffect.ChainDamage: return Chain(skill, target);
-                case HeroSkillEffect.Blink: return Blink(skill, point);
+                case HeroSkillEffect.Blink: return ArcaneBlink(skill);
                 case HeroSkillEffect.GroundImpact: return DamageAndDebuffRadius(skill, point);
                 case HeroSkillEffect.Vortex: return StartZone(skill, point, now);
                 case HeroSkillEffect.RepairPulse:
@@ -636,26 +635,25 @@ namespace CoreKeepers
             if (first == null || !first.IsAlive || Vector3.Distance(hero.transform.position, first.transform.position) > skill.Radius) return false;
             var hit = new HashSet<EnemyBrain>();
             var current = first;
+            EnemyBrain previous = null;
             for (var jump = 0; jump < Mathf.Max(1, skill.Count) && current != null; jump++)
             {
+                if (previous != null)
+                    hero.ServerPresentChainLightning(previous.transform.position + Vector3.up * 0.75f,
+                        current.transform.position + Vector3.up * 0.75f);
                 DealDamage(skill, current, Mathf.Pow(Mathf.Clamp01(1f - skill.SecondaryValue), jump));
                 hit.Add(current);
-                current = EnemiesInRadius(current.transform.position, skill.Duration)
+                previous = current;
+                current = EnemiesInRadius(previous.transform.position, skill.Duration)
                     .Where(enemy => !hit.Contains(enemy)).OrderBy(enemy =>
-                        (enemy.transform.position - current.transform.position).sqrMagnitude).FirstOrDefault();
+                        (enemy.transform.position - previous.transform.position).sqrMagnitude).FirstOrDefault();
             }
             return true;
         }
 
-        private bool Blink(HeroSkillDefinition skill, Vector3 point)
+        private bool ArcaneBlink(HeroSkillDefinition skill)
         {
-            var offset = point - hero.transform.position; offset.y = 0f;
-            if (offset.magnitude > skill.Radius) point = hero.transform.position + offset.normalized * skill.Radius;
-            if (!NavMesh.SamplePosition(point, out var sample, 1.5f, NavMesh.AllAreas)) return false;
-            var origin = hero.transform.position;
-            hero.ServerWarp(sample.position);
-            foreach (var enemy in EnemiesInRadius(origin, skill.SecondaryValue))
-                enemy.ApplyDebuff(EnemyDebuff.Chill, skill.Duration, hero);
+            hero.ServerGrantArcaneSpeed(Mathf.Max(1f, skill.SecondaryValue), skill.Duration);
             return true;
         }
 

@@ -14,6 +14,7 @@ namespace CoreKeepers.Editor
     {
         private const string DefinitionsRoot = "Assets/CoreKeepers/Resources/HeroSkills";
         private const string IconsRoot = "Assets/UI/Skills/icons";
+        private const string ArcaneMageMaterialPath = "Assets/Materials/ArcaneMage.mat";
         private static bool autoConfigurationQueued;
 
         static HeroSkillsProjectSetup()
@@ -145,6 +146,9 @@ namespace CoreKeepers.Editor
                     serialized.FindProperty("configuredMaximumHealth").floatValue = maximumHealth;
                     serialized.FindProperty("damage").floatValue = damage;
                     serialized.FindProperty("attackCooldown").floatValue = attackCooldown;
+                    if (path.EndsWith("CoreMage.prefab", StringComparison.Ordinal))
+                        serialized.FindProperty("arcaneMageMaterial").objectReferenceValue =
+                            AssetDatabase.LoadAssetAtPath<Material>(ArcaneMageMaterialPath);
                     serialized.ApplyModifiedPropertiesWithoutUndo();
                 }
                 PrefabUtility.SaveAsPrefabAsset(root, path);
@@ -244,8 +248,8 @@ namespace CoreKeepers.Editor
             yield return new Spec(103, "Frost Nova", CorePlayerClass.Mage, active, 1, 10, self, HeroSkillEffect.RadialDebuff, 30, 4.5f, 5f, 0, 1, EnemyDebuff.Chill);
             yield return new Spec(104, "Arcane Power", CorePlayerClass.Mage, passive, 2, 0, self, pass, .2f);
             yield return new Spec(105, "Quick Casting", CorePlayerClass.Mage, passive, 2, 0, self, pass, .2f);
-            yield return new Spec(106, "Chain Lightning", CorePlayerClass.Mage, active, 3, 14, enemy, HeroSkillEffect.ChainDamage, 42, 16f, 4f, .15f, 4);
-            yield return new Spec(107, "Arcane Blink", CorePlayerClass.Mage, active, 3, 15, ground, HeroSkillEffect.Blink, 0, 7f, 3f, 3f);
+            yield return new Spec(106, "Chain Lightning", CorePlayerClass.Mage, active, 3, 14, enemy, HeroSkillEffect.ChainDamage, 42, 16f, 2f, .15f, 4);
+            yield return new Spec(107, "Arcane Blink", CorePlayerClass.Mage, active, 3, 15, self, HeroSkillEffect.Blink, 0, 0f, 5f, 2f);
             yield return new Spec(108, "Arcane Exposure", CorePlayerClass.Mage, passive, 4, 0, self, pass, .15f, 0, 5f);
             yield return new Spec(109, "Glass Cannon", CorePlayerClass.Mage, passive, 4, 0, self, pass, .25f, 0, 0, -.15f);
             yield return new Spec(110, "Meteor Strike", CorePlayerClass.Mage, active, 5, 28, ground, HeroSkillEffect.GroundImpact, 110, 4.5f, 5f, 0, 1, EnemyDebuff.OnFire);

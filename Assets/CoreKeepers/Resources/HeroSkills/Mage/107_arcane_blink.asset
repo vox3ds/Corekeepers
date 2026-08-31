@@ -22,11 +22,11 @@ MonoBehaviour:
   icon256: {fileID: 21300000, guid: fccdfddb1b8eeb4458d65cb34e76ec7e, type: 3}
   description: "Arcane Blink \u2014 Active skill unlocked at wave 3. Values are editable
     in this asset."
-  targeting: 2
+  targeting: 1
   effect: 11
   debuff: 0
   power: 0
-  radius: 7
-  duration: 3
-  secondaryValue: 3
+  radius: 0
+  duration: 5
+  secondaryValue: 2
   count: 1
