@@ -26,7 +26,7 @@ MonoBehaviour:
   effect: 12
   debuff: 16
   power: 110
-  radius: 4.5
+  radius: 3.5
   duration: 5
-  secondaryValue: 0
+  secondaryValue: 2
   count: 1

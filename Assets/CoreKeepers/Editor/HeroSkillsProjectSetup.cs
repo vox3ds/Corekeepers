@@ -248,11 +248,11 @@ namespace CoreKeepers.Editor
             yield return new Spec(103, "Frost Nova", CorePlayerClass.Mage, active, 1, 10, self, HeroSkillEffect.RadialDebuff, 30, 4.5f, 5f, 0, 1, EnemyDebuff.Chill);
             yield return new Spec(104, "Arcane Power", CorePlayerClass.Mage, passive, 2, 0, self, pass, .2f);
             yield return new Spec(105, "Quick Casting", CorePlayerClass.Mage, passive, 2, 0, self, pass, .2f);
-            yield return new Spec(106, "Chain Lightning", CorePlayerClass.Mage, active, 3, 14, enemy, HeroSkillEffect.ChainDamage, 42, 16f, 2f, .15f, 4);
+            yield return new Spec(106, "Chain Lightning", CorePlayerClass.Mage, active, 3, 14, enemy, HeroSkillEffect.ChainDamage, 42, 16f, 2f, .15f, 12);
             yield return new Spec(107, "Arcane Blink", CorePlayerClass.Mage, active, 3, 15, self, HeroSkillEffect.Blink, 0, 0f, 5f, 2f);
             yield return new Spec(108, "Arcane Exposure", CorePlayerClass.Mage, passive, 4, 0, self, pass, .15f, 0, 5f);
             yield return new Spec(109, "Glass Cannon", CorePlayerClass.Mage, passive, 4, 0, self, pass, .25f, 0, 0, -.15f);
-            yield return new Spec(110, "Meteor Strike", CorePlayerClass.Mage, active, 5, 28, ground, HeroSkillEffect.GroundImpact, 110, 4.5f, 5f, 0, 1, EnemyDebuff.OnFire);
+            yield return new Spec(110, "Meteor Strike", CorePlayerClass.Mage, active, 5, 28, ground, HeroSkillEffect.GroundImpact, 110, 3.5f, 5f, 2f, 1, EnemyDebuff.OnFire);
             yield return new Spec(111, "Gravity Vortex", CorePlayerClass.Mage, active, 5, 26, ground, HeroSkillEffect.Vortex, 12, 4.5f, 6f, 1.2f);
             yield return new Spec(112, "Arcane Mastery", CorePlayerClass.Mage, passive, 6, 0, self, pass, .1f, 0, 0, 0, 3);
             yield return new Spec(113, "Elemental Detonation", CorePlayerClass.Mage, passive, 6, 0, self, pass, 18, 2.5f);

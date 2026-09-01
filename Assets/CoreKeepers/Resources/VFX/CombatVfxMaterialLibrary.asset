@@ -17,6 +17,8 @@ MonoBehaviour:
   energyExplosion5x4: {fileID: 2100000, guid: 859fd0106971fd8449692e1b4e2dc541, type: 2}
   darkEnergy8x5: {fileID: 2100000, guid: 866904daf5873364686ff8ed9506a4be, type: 2}
   flame8x4: {fileID: 2100000, guid: 9804f1870d7e7764d92906513d504255, type: 2}
+  fireball8x5: {fileID: 2100000, guid: 9372e4a15c9b46646ae237549b98dc54, type: 2}
+  smoke8x5: {fileID: 2100000, guid: fc569a6fef4f359488bc2286b7255a83, type: 2}
   groundFireCrack: {fileID: 2100000, guid: 5eac197313957044c86eb6b372228b3c, type: 2}
   coldWind: {fileID: 2100000, guid: b853cef6bd378084fafd9d8ffbf8368f, type: 2}
   frostSpikesMaterial: {fileID: 2100000, guid: 9778353e2c2c94140bd36a3a3459b066, type: 2}

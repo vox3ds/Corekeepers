@@ -45,8 +45,25 @@ namespace CoreKeepers
             public double NextTick;
         }
 
+        private sealed class PendingChainLightning
+        {
+            public HeroSkillDefinition Skill;
+            public Vector3 PreviousPosition;
+            public readonly HashSet<EnemyBrain> Hit = new();
+            public int JumpIndex;
+            public double NextJumpAt;
+        }
+
+        private sealed class PendingMeteorStrike
+        {
+            public HeroSkillDefinition Skill;
+            public Vector3 Position;
+            public double ImpactAt;
+        }
+
         private const float HeroProjectileSpeed = 13f;
         private const float ArcaneBoltSpeed = HeroProjectileSpeed * 2f;
+        private const double ChainLightningJumpDelay = 0.1d;
 
         private readonly HeroSkillDefinition[] slots = new HeroSkillDefinition[4];
         private readonly float[] localReadyAt = new float[4];
@@ -58,6 +75,8 @@ namespace CoreKeepers
         private readonly List<PendingProjectile> pendingProjectiles = new();
         private readonly List<PendingArcaneBolt> pendingArcaneBolts = new();
         private readonly List<PendingFirePatch> pendingFirePatches = new();
+        private readonly List<PendingChainLightning> pendingChainLightnings = new();
+        private readonly List<PendingMeteorStrike> pendingMeteorStrikes = new();
         private readonly Dictionary<ulong, double> guardianAngelReadyAt = new();
         private NetworkWarrior hero;
         private int selectedSlot;
@@ -330,6 +349,8 @@ namespace CoreKeepers
             pendingProjectiles.Clear();
             pendingArcaneBolts.Clear();
             pendingFirePatches.Clear();
+            pendingChainLightnings.Clear();
+            pendingMeteorStrikes.Clear();
             guardianAngelReadyAt.Clear();
             selectedSlot = 0;
             offeredWave = 0;
@@ -459,9 +480,20 @@ namespace CoreKeepers
                 case HeroSkillEffect.RadialDebuff:
                     if (skill.StableId == 10) return BeginEarthshatter(skill);
                     return DamageAndDebuffRadius(skill, hero.transform.position);
-                case HeroSkillEffect.ChainDamage: return Chain(skill, target);
+                case HeroSkillEffect.ChainDamage: return Chain(skill, target, now);
                 case HeroSkillEffect.Blink: return ArcaneBlink(skill);
-                case HeroSkillEffect.GroundImpact: return DamageAndDebuffRadius(skill, point);
+                case HeroSkillEffect.GroundImpact:
+                    if (skill.StableId == 110)
+                    {
+                        pendingMeteorStrikes.Add(new PendingMeteorStrike
+                        {
+                            Skill = skill,
+                            Position = point,
+                            ImpactAt = now + Mathf.Max(0.1f, skill.SecondaryValue)
+                        });
+                        return true;
+                    }
+                    return DamageAndDebuffRadius(skill, point);
                 case HeroSkillEffect.Vortex: return StartZone(skill, point, now);
                 case HeroSkillEffect.RepairPulse:
                     var repaired = Repair(skill);
@@ -629,24 +661,22 @@ namespace CoreKeepers
             return true;
         }
 
-        private bool Chain(HeroSkillDefinition skill, NetworkObject target)
+        private bool Chain(HeroSkillDefinition skill, NetworkObject target, double now)
         {
             var first = target != null ? target.GetComponent<EnemyBrain>() : null;
             if (first == null || !first.IsAlive || Vector3.Distance(hero.transform.position, first.transform.position) > skill.Radius) return false;
-            var hit = new HashSet<EnemyBrain>();
-            var current = first;
-            EnemyBrain previous = null;
-            for (var jump = 0; jump < Mathf.Max(1, skill.Count) && current != null; jump++)
+            DealDamage(skill, first);
+            if (Mathf.Max(1, skill.Count) > 1)
             {
-                if (previous != null)
-                    hero.ServerPresentChainLightning(previous.transform.position + Vector3.up * 0.75f,
-                        current.transform.position + Vector3.up * 0.75f);
-                DealDamage(skill, current, Mathf.Pow(Mathf.Clamp01(1f - skill.SecondaryValue), jump));
-                hit.Add(current);
-                previous = current;
-                current = EnemiesInRadius(previous.transform.position, skill.Duration)
-                    .Where(enemy => !hit.Contains(enemy)).OrderBy(enemy =>
-                        (enemy.transform.position - previous.transform.position).sqrMagnitude).FirstOrDefault();
+                var pending = new PendingChainLightning
+                {
+                    Skill = skill,
+                    PreviousPosition = first.transform.position,
+                    JumpIndex = 1,
+                    NextJumpAt = now + ChainLightningJumpDelay
+                };
+                pending.Hit.Add(first);
+                pendingChainLightnings.Add(pending);
             }
             return true;
         }
@@ -737,6 +767,8 @@ namespace CoreKeepers
             var now = hero.NetworkManager.ServerTime.Time;
             UpdateArcaneBolts(now);
             UpdateProjectiles(now);
+            UpdateChainLightnings(now);
+            UpdateMeteorStrikes(now);
             UpdateFirePatches(now);
             UpdatePendingWarriorImpacts();
             if (selfBuffEndsAt > 0d && now >= selfBuffEndsAt)
@@ -864,27 +896,61 @@ namespace CoreKeepers
                 var targetPoint = impactPoint + Vector3.up * 0.75f;
                 var offset = targetPoint - projectile.Position;
                 var step = HeroProjectileSpeed * Time.deltaTime;
+                var direction = offset.sqrMagnitude > 0.001f ? offset.normalized : hero.transform.forward;
+                var travelDistance = Mathf.Min(step, offset.magnitude);
+                if (projectile.Skill.Effect == HeroSkillEffect.ExplodingProjectile &&
+                    TryFindProjectileObstacle(projectile.Position, direction, travelDistance, out var obstacleHit))
+                {
+                    var obstacleImpact = obstacleHit.point;
+                    obstacleImpact.y = impactPoint.y;
+                    pendingProjectiles.RemoveAt(index);
+                    ExplodeProjectile(projectile, obstacleImpact, now);
+                    hero.ServerPresentProjectileImpact(projectile.Skill.StableId, obstacleImpact, direction);
+                    continue;
+                }
                 if (offset.magnitude > step)
                 {
-                    projectile.Position += offset.normalized * step;
+                    projectile.Position += direction * step;
                     continue;
                 }
                 pendingProjectiles.RemoveAt(index);
                 if (projectile.Skill.Effect == HeroSkillEffect.ExplodingProjectile)
-                {
-                    DamageRadius(projectile.Skill, impactPoint);
-                    if (projectile.Skill.StableId == 102)
-                        pendingFirePatches.Add(new PendingFirePatch
-                        {
-                            Position = impactPoint,
-                            Radius = projectile.Skill.Radius,
-                            EndsAt = now + projectile.Skill.Duration,
-                            NextTick = now
-                        });
-                }
+                    ExplodeProjectile(projectile, impactPoint, now);
                 else
                     DealDamage(projectile.Skill, projectile.Target);
             }
+        }
+
+        private bool TryFindProjectileObstacle(Vector3 origin, Vector3 direction, float distance,
+            out RaycastHit obstacleHit)
+        {
+            obstacleHit = default;
+            if (distance <= 0f) return false;
+            var hits = Physics.SphereCastAll(origin, 0.25f, direction, distance,
+                Physics.AllLayers, QueryTriggerInteraction.Ignore);
+            Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+            foreach (var hit in hits)
+            {
+                if (hit.collider == null) continue;
+                var hitHero = hit.collider.GetComponentInParent<NetworkWarrior>();
+                if (hitHero == hero) continue;
+                obstacleHit = hit;
+                return true;
+            }
+            return false;
+        }
+
+        private void ExplodeProjectile(PendingProjectile projectile, Vector3 impactPoint, double now)
+        {
+            DamageRadius(projectile.Skill, impactPoint);
+            if (projectile.Skill.StableId != 102) return;
+            pendingFirePatches.Add(new PendingFirePatch
+            {
+                Position = impactPoint,
+                Radius = projectile.Skill.Radius,
+                EndsAt = now + projectile.Skill.Duration,
+                NextTick = now
+            });
         }
 
         private void UpdateFirePatches(double now)
@@ -907,6 +973,67 @@ namespace CoreKeepers
                     enemy.ApplyDebuff(EnemyDebuff.OnFire, 2f, hero);
                 foreach (var building in BuildingsInRadius(patch.Position, patch.Radius))
                     building.Damage(fireDamagePerSecond * (float)tickInterval);
+            }
+        }
+
+        private void UpdateChainLightnings(double now)
+        {
+            for (var index = pendingChainLightnings.Count - 1; index >= 0; index--)
+            {
+                var chain = pendingChainLightnings[index];
+                if (chain.Skill == null || chain.JumpIndex >= Mathf.Max(1, chain.Skill.Count))
+                {
+                    pendingChainLightnings.RemoveAt(index);
+                    continue;
+                }
+                if (now < chain.NextJumpAt) continue;
+
+                var next = EnemiesInRadius(chain.PreviousPosition, chain.Skill.Duration)
+                    .Where(enemy => !chain.Hit.Contains(enemy))
+                    .OrderBy(enemy => (enemy.transform.position - chain.PreviousPosition).sqrMagnitude)
+                    .FirstOrDefault();
+                if (next == null)
+                {
+                    pendingChainLightnings.RemoveAt(index);
+                    continue;
+                }
+
+                var nextPosition = next.transform.position;
+                hero.ServerPresentChainLightning(chain.PreviousPosition + Vector3.up * 0.75f,
+                    nextPosition + Vector3.up * 0.75f);
+                DealDamage(chain.Skill, next,
+                    Mathf.Pow(Mathf.Clamp01(1f - chain.Skill.SecondaryValue), chain.JumpIndex));
+                chain.Hit.Add(next);
+                chain.PreviousPosition = nextPosition;
+                chain.JumpIndex++;
+                chain.NextJumpAt = now + ChainLightningJumpDelay;
+
+                if (chain.JumpIndex >= Mathf.Max(1, chain.Skill.Count))
+                    pendingChainLightnings.RemoveAt(index);
+            }
+        }
+
+        private void UpdateMeteorStrikes(double now)
+        {
+            for (var index = pendingMeteorStrikes.Count - 1; index >= 0; index--)
+            {
+                var meteor = pendingMeteorStrikes[index];
+                if (meteor.Skill == null)
+                {
+                    pendingMeteorStrikes.RemoveAt(index);
+                    continue;
+                }
+                if (now < meteor.ImpactAt) continue;
+
+                pendingMeteorStrikes.RemoveAt(index);
+                DamageAndDebuffRadius(meteor.Skill, meteor.Position);
+                pendingFirePatches.Add(new PendingFirePatch
+                {
+                    Position = meteor.Position,
+                    Radius = meteor.Skill.Radius,
+                    EndsAt = now + meteor.Skill.Duration,
+                    NextTick = now
+                });
             }
         }
 

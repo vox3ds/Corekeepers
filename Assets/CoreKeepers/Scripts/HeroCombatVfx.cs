@@ -26,7 +26,9 @@ namespace CoreKeepers
         EnergyExplosion8x8,
         EnergyExplosion5x4,
         DarkEnergy8x5,
-        Flame8x4
+        Flame8x4,
+        Fireball8x5,
+        Smoke8x5
     }
 
     /// <summary>Lightweight first-pass combat presentation shared by gameplay and DebugScene.</summary>
@@ -56,7 +58,7 @@ namespace CoreKeepers
                             CombatVfxAtlas.EnergyExplosion8x8, 1f);
                     else if (isFireball)
                         SpawnProjectileMuzzleFlash(origin, targetPoint - origin, color,
-                            CombatVfxAtlas.Flame8x4, 1.65f);
+                            CombatVfxAtlas.Fireball8x5, 1.65f);
                     var projectileDestination = isFireball && target == null ? point + Vector3.up * 0.75f : targetPoint;
                     HeroProjectileVisual.Spawn(origin, isArcaneBolt ? point : projectileDestination,
                         isArcaneBolt ? null : target, color,
@@ -72,8 +74,13 @@ namespace CoreKeepers
                     SpawnBurst(origin, color, 1.1f, CombatVfxAtlas.EnergyExplosion5x4);
                     break;
                 case HeroSkillEffect.GroundImpact:
-                    SpawnRing(point, color, Mathf.Max(1f, skill.Radius), 0.8f);
-                    SpawnBurst(point + Vector3.up * 0.2f, color, 1.5f, CombatVfxAtlas.Explosion9x9);
+                    if (skill.StableId == 110)
+                        SpawnMeteorStrike(point, skill.Radius, skill.Duration, skill.SecondaryValue);
+                    else
+                    {
+                        SpawnRing(point, color, Mathf.Max(1f, skill.Radius), 0.8f);
+                        SpawnBurst(point + Vector3.up * 0.2f, color, 1.5f, CombatVfxAtlas.Explosion9x9);
+                    }
                     break;
                 case HeroSkillEffect.Vortex:
                     SpawnRing(point, color, Mathf.Max(1f, skill.Radius), 0.8f);
@@ -124,7 +131,7 @@ namespace CoreKeepers
                     HeroProjectileVisual.Spawn(center, destination, null, Arcane, 0.14f, 0.8f,
                         false, true); break;
                 case CombatVfxPreview.Fireball:
-                    SpawnProjectileMuzzleFlash(center, forward, Fire, CombatVfxAtlas.Flame8x4, 1.65f);
+                    SpawnProjectileMuzzleFlash(center, forward, Fire, CombatVfxAtlas.Fireball8x5, 1.65f);
                     HeroProjectileVisual.Spawn(center, destination, null, Fire, 0.34f, 1.75f,
                         true, false, true, 5f); break;
                 case CombatVfxPreview.FrostNova:
@@ -139,8 +146,7 @@ namespace CoreKeepers
                     SpawnRing(subject.position, Nature, 2.5f, 1.1f);
                     SpawnBurst(center, Nature, 0.9f, CombatVfxAtlas.EnergyExplosion8x8); break;
                 case CombatVfxPreview.GroundImpact:
-                    SpawnRing(subject.position, Fire, 4f, 0.7f);
-                    SpawnBurst(center, Fire, 1.5f, CombatVfxAtlas.Explosion9x9); break;
+                    SpawnMeteorStrike(subject.position, 3.5f, 5f, 2f); break;
                 case CombatVfxPreview.Vortex:
                     SpawnRing(subject.position, Arcane, 4.5f, 1.2f);
                     SpawnBurst(center, Arcane, 1.5f, CombatVfxAtlas.DarkEnergy8x5); break;
@@ -151,9 +157,14 @@ namespace CoreKeepers
 
         public static void PlayProjectileImpact(int stableId, Vector3 position, Vector3 direction)
         {
-            if (stableId != 101) return;
             if (direction.sqrMagnitude < 0.001f) direction = Vector3.forward;
             direction.Normalize();
+            if (stableId == 102)
+            {
+                HeroProjectileVisual.ResolveFireballImpact(position, direction);
+                return;
+            }
+            if (stableId != 101) return;
             HeroProjectileVisual.ResolveArcaneImpact(position, direction);
             SpawnBurst(position, Arcane, 0.72f, CombatVfxAtlas.EnergyExplosion8x8);
             SpawnDirectionalSparkles(position, direction, Arcane);
@@ -360,6 +371,23 @@ namespace CoreKeepers
             SpawnBurst(groundPosition + Vector3.up * 0.45f, Fire, 1.65f, CombatVfxAtlas.Explosion9x9);
             SpawnRing(groundPosition, Fire, radius, 0.5f, 10f);
             SpawnBurningGround(groundPosition, radius, duration);
+        }
+
+        private static void SpawnMeteorStrike(Vector3 groundPosition, float radius, float groundDuration,
+            float impactDelay)
+        {
+            var prefab = Resources.Load<GameObject>("VFX/MeteorStrikeVfx");
+            if (prefab == null)
+            {
+                Debug.LogError("MeteorStrikeVfx prefab was not found in Resources/VFX.");
+                return;
+            }
+            var instance = UnityEngine.Object.Instantiate(prefab, groundPosition, Quaternion.identity);
+            instance.name = prefab.name;
+            var controller = instance.GetComponent<MeteorStrikeVfx>();
+            if (controller != null)
+                controller.Initialize(Mathf.Max(0.5f, radius), Mathf.Max(1f, groundDuration),
+                    Mathf.Max(0.1f, impactDelay));
         }
 
         private static void SpawnFrostNova(Vector3 position, float radius)
@@ -597,7 +625,7 @@ namespace CoreKeepers
             particles.Play();
         }
 
-        private static bool TryGetAtlas(CombatVfxAtlas requested, Color color, out Material material,
+        internal static bool TryGetAtlas(CombatVfxAtlas requested, Color color, out Material material,
             out int columns, out int rows)
         {
             if (!materialLibraryLoaded)
@@ -622,6 +650,8 @@ namespace CoreKeepers
                 CombatVfxAtlas.EnergyExplosion5x4 => materialLibrary != null ? materialLibrary.EnergyExplosion5x4 : null,
                 CombatVfxAtlas.DarkEnergy8x5 => materialLibrary != null ? materialLibrary.DarkEnergy8x5 : null,
                 CombatVfxAtlas.Flame8x4 => materialLibrary != null ? materialLibrary.Flame8x4 : null,
+                CombatVfxAtlas.Fireball8x5 => materialLibrary != null ? materialLibrary.Fireball8x5 : null,
+                CombatVfxAtlas.Smoke8x5 => materialLibrary != null ? materialLibrary.Smoke8x5 : null,
                 _ => null
             };
             (columns, rows) = requested switch
@@ -631,9 +661,39 @@ namespace CoreKeepers
                 CombatVfxAtlas.EnergyExplosion5x4 => (5, 4),
                 CombatVfxAtlas.DarkEnergy8x5 => (8, 5),
                 CombatVfxAtlas.Flame8x4 => (8, 4),
+                CombatVfxAtlas.Fireball8x5 => (8, 5),
+                CombatVfxAtlas.Smoke8x5 => (8, 5),
                 _ => (1, 1)
             };
             return material != null;
+        }
+
+        internal static FireballParticleSettings GetFireballParticleSettings(bool smoke)
+        {
+            return smoke
+                ? new FireballParticleSettings
+                {
+                    lifetimeMin = 0.48f, lifetimeMax = 0.9f,
+                    speedMin = 0.08f, speedMax = 0.32f,
+                    sizeMin = 0.6f, sizeMax = 1.36f,
+                    emissionRate = 117f, burstCount = 12,
+                    shapeRadius = 0.01f, maxParticles = 1200,
+                    startAlphaMin = 0.92f, startAlphaMax = 1f,
+                    noiseStrength = 0.3f, noiseFrequency = 0.65f, noiseScrollSpeed = 0.5f,
+                    verticalVelocityMin = 0.12f, verticalVelocityMax = 0.38f,
+                    sortingOrder = -1
+                }
+                : new FireballParticleSettings
+                {
+                    lifetimeMin = 0.112f, lifetimeMax = 0.294f,
+                    speedMin = 0.03f, speedMax = 0.24f,
+                    sizeMin = 0.32f, sizeMax = 0.8f,
+                    emissionRate = 378f, burstCount = 32,
+                    shapeRadius = 0.01f, maxParticles = 2000,
+                    startAlphaMin = 1f, startAlphaMax = 1f,
+                    noiseStrength = 0.2f, noiseFrequency = 1.4f, noiseScrollSpeed = 1.5f,
+                    sortingOrder = 1
+                };
         }
 
         private static float ColorDistance(Color left, Color right)
@@ -1021,11 +1081,13 @@ namespace CoreKeepers
         private bool fireball;
         private float lingerDuration;
         private Vector3 travelDirection;
+        private bool resolved;
 
         public static void Spawn(Vector3 origin, Vector3 destination, Transform target, Color color,
             float scale, float impactSize, bool impactOnArrival = true, bool arcaneBolt = false,
             bool fireball = false, float lingerDuration = 0f)
         {
+            if (arcaneBolt) scale *= 0.6f;
             var root = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             root.name = "Hero Projectile VFX";
             var collider = root.GetComponent<Collider>();
@@ -1043,39 +1105,175 @@ namespace CoreKeepers
             visual.lingerDuration = lingerDuration;
             visual.travelDirection = (destination - origin).sqrMagnitude > 0.001f
                 ? (destination - origin).normalized : Vector3.forward;
-            visual.material = HeroCombatVfx.CreateMaterial(color, false, fireball ? 9f : 2.5f);
-            root.GetComponent<Renderer>().material = visual.material;
-            var trail = root.AddComponent<TrailRenderer>();
-            trail.time = 0.22f;
-            trail.minVertexDistance = 0.03f;
-            trail.widthCurve = new AnimationCurve(new Keyframe(0f, scale * 0.9f), new Keyframe(1f, 0f));
-            trail.startColor = color * 1.7f;
-            trail.endColor = new Color(color.r, color.g, color.b, 0f);
-            visual.trailMaterial = HeroCombatVfx.CreateMaterial(color, true, fireball ? 6f : 2.5f);
-            trail.material = visual.trailMaterial;
-            trail.numCornerVertices = 3;
-            if (arcaneBolt)
+            root.transform.rotation = Quaternion.LookRotation(visual.travelDirection, Vector3.up);
+            var sphereRenderer = root.GetComponent<Renderer>();
+            if (fireball)
             {
-                trail.time = 0.3f;
-                trail.widthMultiplier = 1.25f;
+                sphereRenderer.enabled = false;
+                CreateFireballFlightParticles(root.transform, scale, color);
+            }
+            else
+            {
+                var glowMultiplier = arcaneBolt ? 6f : 2.5f;
+                visual.material = HeroCombatVfx.CreateMaterial(color, false, glowMultiplier);
+                sphereRenderer.material = visual.material;
+                var trail = root.AddComponent<TrailRenderer>();
+                trail.time = arcaneBolt ? 0.3f : 0.22f;
+                trail.minVertexDistance = 0.03f;
+                trail.widthCurve = new AnimationCurve(new Keyframe(0f, scale * 0.9f), new Keyframe(1f, 0f));
+                trail.startColor = color * (arcaneBolt ? 2.5f : 1.7f);
+                trail.endColor = new Color(color.r, color.g, color.b, 0f);
+                visual.trailMaterial = HeroCombatVfx.CreateMaterial(color, true, glowMultiplier);
+                trail.material = visual.trailMaterial;
+                trail.numCornerVertices = 3;
+                if (arcaneBolt) trail.widthMultiplier = 1.25f;
+            }
+            if (fireball)
+            {
                 var glow = root.AddComponent<Light>();
                 glow.type = LightType.Point;
                 glow.color = color;
-                glow.intensity = 5f;
-                glow.range = 3.2f;
+                glow.intensity = 9f;
+                glow.range = 4.8f;
                 glow.shadows = LightShadows.None;
             }
-            else if (fireball)
+        }
+
+        private static void CreateFireballFlightParticles(Transform projectile, float projectileScale, Color fireColor)
+        {
+            var prefab = Resources.Load<GameObject>("VFX/FireballProjectileVfx");
+            if (prefab != null)
             {
-                trail.time = 0.42f;
-                trail.widthMultiplier = 1.45f;
-                var glow = root.AddComponent<Light>();
-                glow.type = LightType.Point;
-                glow.color = color;
-                glow.intensity = 12f;
-                glow.range = 6f;
-                glow.shadows = LightShadows.None;
+                var instance = Instantiate(prefab, projectile, false);
+                instance.name = prefab.name;
+                instance.transform.localPosition = Vector3.zero;
+                instance.transform.localRotation = Quaternion.identity;
+                instance.transform.localScale = Vector3.one / Mathf.Max(0.01f, projectileScale);
+                return;
             }
+
+            Debug.LogWarning("FireballProjectileVfx prefab was not found in Resources/VFX. Using generated fallback particles.");
+            HeroCombatVfx.TryGetAtlas(CombatVfxAtlas.Fireball8x5, fireColor,
+                out var flameMaterial, out var flameColumns, out var flameRows);
+            HeroCombatVfx.TryGetAtlas(CombatVfxAtlas.Smoke8x5, Color.gray,
+                out var smokeMaterial, out var smokeColumns, out var smokeRows);
+            CreateFireballEmitter(projectile, "Fireball - Flames", projectileScale, flameMaterial,
+                flameColumns, flameRows, false, HeroCombatVfx.GetFireballParticleSettings(false));
+            CreateFireballEmitter(projectile, "Fireball - Smoke", projectileScale, smokeMaterial,
+                smokeColumns, smokeRows, true, HeroCombatVfx.GetFireballParticleSettings(true));
+        }
+
+        private static void CreateFireballEmitter(Transform projectile, string name, float projectileScale,
+            Material material, int columns, int rows, bool smoke, FireballParticleSettings settings)
+        {
+            settings ??= new FireballParticleSettings();
+            var root = new GameObject(name);
+            root.transform.SetParent(projectile, false);
+            root.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            var inverseScale = 1f / Mathf.Max(0.01f, projectileScale);
+            root.transform.localScale = Vector3.one * inverseScale;
+            var particles = root.AddComponent<ParticleSystem>();
+            particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = particles.main;
+            main.duration = 1f;
+            main.loop = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(
+                Mathf.Min(settings.lifetimeMin, settings.lifetimeMax),
+                Mathf.Max(settings.lifetimeMin, settings.lifetimeMax));
+            main.startSpeed = new ParticleSystem.MinMaxCurve(
+                Mathf.Min(settings.speedMin, settings.speedMax),
+                Mathf.Max(settings.speedMin, settings.speedMax));
+            main.startSize = new ParticleSystem.MinMaxCurve(
+                Mathf.Min(settings.sizeMin, settings.sizeMax),
+                Mathf.Max(settings.sizeMin, settings.sizeMax));
+            main.startRotation = new ParticleSystem.MinMaxCurve(-Mathf.PI, Mathf.PI);
+            main.startColor = smoke
+                ? new ParticleSystem.MinMaxGradient(
+                    new Color(0.12f, 0.1f, 0.09f, settings.startAlphaMin),
+                    new Color(0.34f, 0.25f, 0.2f, settings.startAlphaMax))
+                : new ParticleSystem.MinMaxGradient(
+                    new Color(1f, 1f, 1f, settings.startAlphaMin),
+                    new Color(1f, 0.22f, 0.015f, settings.startAlphaMax));
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            main.maxParticles = Mathf.Max(1, settings.maxParticles);
+            var emission = particles.emission;
+            emission.rateOverTime = Mathf.Max(0f, settings.emissionRate);
+            emission.SetBursts(new[]
+            {
+                new ParticleSystem.Burst(0f, (short)Mathf.Clamp(settings.burstCount, 0, short.MaxValue))
+            });
+            var shape = particles.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = Mathf.Max(0.001f, settings.shapeRadius);
+            shape.radiusThickness = 1f;
+            var colorOverLifetime = particles.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(new Gradient
+            {
+                colorKeys = smoke
+                    ? new[]
+                    {
+                        new GradientColorKey(new Color(0.28f, 0.2f, 0.16f), 0f),
+                        new GradientColorKey(new Color(0.08f, 0.075f, 0.07f), 1f)
+                    }
+                    : new[]
+                    {
+                        new GradientColorKey(Color.white, 0f),
+                        new GradientColorKey(new Color(1f, 0.38f, 0.025f), 0.4f),
+                        new GradientColorKey(new Color(0.35f, 0.025f, 0.005f), 1f)
+                    },
+                alphaKeys = smoke
+                    ? new[]
+                    {
+                        new GradientAlphaKey(0.15f, 0f), new GradientAlphaKey(1f, 0.08f),
+                        new GradientAlphaKey(0.85f, 0.62f), new GradientAlphaKey(0f, 1f)
+                    }
+                    : new[]
+                    {
+                        new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.08f),
+                        new GradientAlphaKey(0f, 1f)
+                    }
+            });
+            if (smoke)
+            {
+                var velocity = particles.velocityOverLifetime;
+                velocity.enabled = true;
+                velocity.space = ParticleSystemSimulationSpace.World;
+                velocity.y = (settings.verticalVelocityMin + settings.verticalVelocityMax) * 0.5f;
+                var noise = particles.noise;
+                noise.enabled = true;
+                noise.strength = Mathf.Max(0f, settings.noiseStrength);
+                noise.frequency = Mathf.Max(0f, settings.noiseFrequency);
+                noise.scrollSpeed = settings.noiseScrollSpeed;
+            }
+            else
+            {
+                var noise = particles.noise;
+                noise.enabled = true;
+                noise.strength = Mathf.Max(0f, settings.noiseStrength);
+                noise.frequency = Mathf.Max(0f, settings.noiseFrequency);
+                noise.scrollSpeed = settings.noiseScrollSpeed;
+            }
+            var renderer = particles.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sortingOrder = settings.sortingOrder;
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            if (material != null && columns > 1 && rows > 1)
+            {
+                var textureSheet = particles.textureSheetAnimation;
+                textureSheet.enabled = true;
+                textureSheet.mode = ParticleSystemAnimationMode.Grid;
+                textureSheet.animation = ParticleSystemAnimationType.WholeSheet;
+                textureSheet.numTilesX = columns;
+                textureSheet.numTilesY = rows;
+                textureSheet.cycleCount = 1;
+                textureSheet.frameOverTime = new ParticleSystem.MinMaxCurve(1f,
+                    AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            }
+            particles.Play();
         }
 
         private void OnEnable() => Active.Add(this);
@@ -1101,30 +1299,93 @@ namespace CoreKeepers
             Destroy(closest.gameObject);
         }
 
+        public static void ResolveFireballImpact(Vector3 groundPosition, Vector3 direction)
+        {
+            HeroProjectileVisual closest = null;
+            var closestDistance = float.MaxValue;
+            foreach (var candidate in Active)
+            {
+                if (candidate == null || !candidate.fireball || candidate.resolved) continue;
+                var alignment = Vector3.Dot(candidate.travelDirection, direction);
+                if (alignment < 0.35f) continue;
+                var expectedPosition = groundPosition + Vector3.up * 0.75f;
+                var distance = (candidate.transform.position - expectedPosition).sqrMagnitude +
+                               (1f - alignment) * 4f;
+                if (distance >= closestDistance) continue;
+                closestDistance = distance;
+                closest = candidate;
+            }
+            if (closest != null) closest.CompleteFireballImpact(groundPosition);
+        }
+
         private void Update()
         {
+            if (resolved) return;
             age += Time.deltaTime;
             if (target != null) destination = target.position + Vector3.up * 0.75f;
             var offset = destination - transform.position;
             var step = Speed * (arcaneBolt ? 2f : 1f) * Time.deltaTime;
             if (offset.magnitude <= step || age >= 4f)
             {
+                if (fireball)
+                {
+                    CompleteFireballImpact(destination - Vector3.up * 0.75f);
+                    return;
+                }
                 if (impactOnArrival)
                 {
-                    if (fireball)
-                        HeroCombatVfx.SpawnFireballImpact(destination - Vector3.up * 0.75f,
-                            impactSize, lingerDuration);
-                    else
-                    {
-                        HeroCombatVfx.SpawnBurst(destination, color, impactSize);
-                        HeroCombatVfx.SpawnRing(destination - Vector3.up * 0.7f, color, impactSize, 0.4f);
-                    }
+                    HeroCombatVfx.SpawnBurst(destination, color, impactSize);
+                    HeroCombatVfx.SpawnRing(destination - Vector3.up * 0.7f, color, impactSize, 0.4f);
                 }
                 Destroy(gameObject);
                 return;
             }
-            transform.position += offset.normalized * step;
+            travelDirection = offset.normalized;
+            transform.rotation = Quaternion.LookRotation(travelDirection, Vector3.up);
+            transform.position += travelDirection * step;
             transform.localScale *= 1f + Mathf.Sin(age * 22f) * 0.003f;
+        }
+
+        private void CompleteFireballImpact(Vector3 groundPosition)
+        {
+            if (resolved) return;
+            resolved = true;
+            transform.position = groundPosition + Vector3.up * 0.75f;
+            if (impactOnArrival)
+                HeroCombatVfx.SpawnFireballImpact(groundPosition, impactSize, lingerDuration);
+            ReleaseFireballParticles();
+            Destroy(gameObject);
+        }
+
+        private void ReleaseFireballParticles()
+        {
+            var systems = GetComponentsInChildren<ParticleSystem>(true);
+            if (systems.Length == 0) return;
+
+            var prefabRoot = transform.Find("FireballProjectileVfx");
+            GameObject releasedRoot;
+            if (prefabRoot != null)
+            {
+                prefabRoot.SetParent(null, true);
+                releasedRoot = prefabRoot.gameObject;
+            }
+            else
+            {
+                releasedRoot = new GameObject("FireballProjectileVfx - Fading");
+                releasedRoot.transform.SetPositionAndRotation(transform.position, transform.rotation);
+                foreach (var system in systems)
+                    system.transform.SetParent(releasedRoot.transform, true);
+            }
+
+            var maximumRemainingLifetime = 0f;
+            foreach (var system in systems)
+            {
+                maximumRemainingLifetime = Mathf.Max(maximumRemainingLifetime,
+                    system.main.startLifetime.constantMax);
+                system.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+            }
+
+            Destroy(releasedRoot, maximumRemainingLifetime + 0.25f);
         }
 
         private void OnDestroy()
