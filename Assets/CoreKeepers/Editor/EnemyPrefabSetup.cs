@@ -12,11 +12,13 @@ using UnityEngine.AI;
 
 public static class EnemyPrefabSetup
 {
-    private const string SetupVersionKey = "CoreKeepers.EnemyPrefabSetup.v6";
+    private const string SetupVersionKey = "CoreKeepers.EnemyPrefabSetup.v8";
     private const string EnemyDirectory = "Assets/CoreKeepers/Resources/Enemies";
     private const string ProjectileDirectory = "Assets/CoreKeepers/Resources/EnemyProjectiles";
     private const string TrapPath = "Assets/CoreKeepers/Resources/Buildings/TrapPlate.prefab";
     private const string NetworkPrefabListPath = "Assets/DefaultNetworkPrefabs.asset";
+    private const string HealthCircleEmptyPath = "Assets/UI/HPCircleEmpty.png";
+    private const string HealthCircleFullPath = "Assets/UI/HPCircleFull.png";
 
     [InitializeOnLoadMethod]
     private static void ConfigureOnceAfterCompile()
@@ -63,6 +65,22 @@ public static class EnemyPrefabSetup
         EditorApplication.Exit(0);
     }
 
+    [MenuItem("Core Keepers/Configure Enemy Health Circles")]
+    public static void ConfigureHealthCircles()
+    {
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { EnemyDirectory }))
+            ConfigureEnemyHealthCircle(AssetDatabase.GUIDToAssetPath(guid));
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("Configured health circles on all Core Keepers enemy prefabs.");
+    }
+
+    public static void ConfigureHealthCirclesBatch()
+    {
+        ConfigureHealthCircles();
+        EditorApplication.Exit(0);
+    }
+
     private static void ConfigureEnemy(string path)
     {
         var root = PrefabUtility.LoadPrefabContents(path);
@@ -106,6 +124,7 @@ public static class EnemyPrefabSetup
             }
 
             var brain = AddIfMissing<EnemyBrain>(root);
+            ConfigureEnemyHealthCircle(root);
             var animator = AddIfMissing<EnemyProceduralAnimator>(root);
             var serialized = new SerializedObject(brain);
             var combat = CombatProfile(enemyName);
@@ -154,6 +173,33 @@ public static class EnemyPrefabSetup
         {
             PrefabUtility.UnloadPrefabContents(root);
         }
+    }
+
+    private static void ConfigureEnemyHealthCircle(string path)
+    {
+        var root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            ConfigureEnemyHealthCircle(root);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    private static void ConfigureEnemyHealthCircle(GameObject root)
+    {
+        var healthCircle = AddIfMissing<EnemyHealthCircle>(root);
+        var serialized = new SerializedObject(healthCircle);
+        serialized.FindProperty("emptySprite").objectReferenceValue =
+            AssetDatabase.LoadAssetAtPath<Sprite>(HealthCircleEmptyPath);
+        serialized.FindProperty("fullSprite").objectReferenceValue =
+            AssetDatabase.LoadAssetAtPath<Sprite>(HealthCircleFullPath);
+        serialized.FindProperty("worldOffset").vector3Value = new Vector3(0f, 1.75f, 0f);
+        serialized.FindProperty("worldSize").floatValue = 0.41f;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void ConfigureProjectilePrefabs()

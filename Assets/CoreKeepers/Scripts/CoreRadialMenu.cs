@@ -36,7 +36,6 @@ namespace CoreKeepers
         private Vector3 buildPosition;
         private CoreBuilding upgradeTarget;
         private CoreDebugDeposit coreTarget;
-        private Image[] buildPriceIcons;
         private Image upgradeAPriceIcon;
         private Image upgradeBPriceIcon;
         private Image coreGuardianPriceIcon;
@@ -183,8 +182,7 @@ namespace CoreKeepers
                 var type = (CoreBuildingType)index;
                 var cost = CoreBuildingCatalog.Cost(type);
                 var currency = CoreBuildingCatalog.BuildCurrency(type);
-                buildLabels[index].text = $"{CoreBuildingCatalog.Icon(type)}  {CoreBuildingCatalog.Name(type)}\n    {cost}";
-                SetPriceIcon(buildPriceIcons[index], currency);
+                buildLabels[index].text = cost.ToString();
                 buildButtons[index].interactable = deposit != null && deposit.CanAfford(currency, cost);
             }
             buildHint.text = $"CORE MATERIALS  Ore {ore}  |  Core Shards {shards}";
@@ -220,9 +218,6 @@ namespace CoreKeepers
 
         private void CreatePriceIcons()
         {
-            buildPriceIcons = new Image[buildLabels.Length];
-            for (var index = 0; index < buildLabels.Length; index++)
-                buildPriceIcons[index] = CreatePriceIcon(buildLabels[index]);
             upgradeAPriceIcon = CreatePriceIcon(upgradeALabel);
             upgradeBPriceIcon = CreatePriceIcon(upgradeBLabel);
             coreGuardianPriceIcon = CreatePriceIcon(coreGuardianLabel);

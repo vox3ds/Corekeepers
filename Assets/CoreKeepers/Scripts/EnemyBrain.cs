@@ -87,7 +87,7 @@ namespace CoreKeepers
         [SerializeField] private bool resistant_Poisoned;
 
         [Header("Debuff Defaults")]
-        [SerializeField, Range(0f, 0.95f)] private float chillSlow = 0.3f;
+        [SerializeField, Range(0f, 0.95f)] private float chillSlow = 0.5f;
         [SerializeField, Range(0f, 0.95f)] private float swampSlow = 0.3f;
         [SerializeField, Min(0.1f)] private float fireDuration = 5f;
         [SerializeField, Min(0f)] private float fireDamagePerSecond = 2f;
@@ -134,6 +134,17 @@ namespace CoreKeepers
         private double arcaneExposureEndsAt;
         private float arcaneExposureBonus;
         private NetworkWarrior elementalStatusSource;
+        private Vector3 gravityVortexCenter;
+        private float gravityVortexStrength;
+        private double gravityVortexEndsAt;
+        private bool gravityVortexActive;
+        private bool gravityVortexWasPhysicsRoll;
+        private Quaternion gravityVortexUprightRotation;
+        private bool gravityVortexRecoveryActive;
+        private double gravityVortexRecoveryStartedAt;
+        private Vector3 gravityVortexRecoveryStart;
+        private Vector3 gravityVortexRecoveryTarget;
+        private Quaternion gravityVortexRecoveryStartRotation;
 
         public float Health => health.Value;
         public float MaximumHealth => maximumHealth;
@@ -145,7 +156,7 @@ namespace CoreKeepers
         public bool IsLootGoblin => lootGoblin;
         public EnemyDebuff ActiveDebuffs => debuffs.Value;
         public EnemyAnimationState CurrentAnimation => animationState.Value;
-        public float NormalizedSpeed => normalizedSpeed;
+        public float NormalizedSpeed => gravityVortexActive || gravityVortexRecoveryActive ? 0f : normalizedSpeed;
         public Transform CurrentTarget => ResolveReplicatedTarget()?.transform;
         public float AnimationProgress
         {
@@ -205,6 +216,9 @@ namespace CoreKeepers
                 return;
             }
 
+            if (UpdateGravityVortex(now))
+                return;
+
             if (lootGoblin && now >= lootGoblinEscapeAt)
             {
                 if (NetworkObject.IsSpawned) NetworkObject.Despawn(true);
@@ -247,6 +261,29 @@ namespace CoreKeepers
 
         private void FixedUpdate()
         {
+            if (IsServer && gravityVortexActive && body != null && !body.isKinematic)
+            {
+                var offset = gravityVortexCenter - body.position;
+                offset.y = 0f;
+                var vortexPlanarVelocity = new Vector3(body.linearVelocity.x, 0f, body.linearVelocity.z);
+                if (offset.sqrMagnitude > 0.01f)
+                {
+                    var direction = offset.normalized;
+                    var acceleration = Mathf.Max(10f, gravityVortexStrength * 12f);
+                    body.AddForce(direction * acceleration - vortexPlanarVelocity * 2.2f, ForceMode.Acceleration);
+                    body.AddTorque(Vector3.Cross(Vector3.up, direction) * acceleration * 0.7f,
+                        ForceMode.Acceleration);
+                    var maximumSpeed = Mathf.Max(5f, gravityVortexStrength * 4.5f);
+                    if (vortexPlanarVelocity.magnitude > maximumSpeed)
+                    {
+                        var clamped = vortexPlanarVelocity.normalized * maximumSpeed;
+                        body.linearVelocity = new Vector3(clamped.x, body.linearVelocity.y, clamped.z);
+                    }
+                }
+                else
+                    body.AddForce(-vortexPlanarVelocity * 4f, ForceMode.Acceleration);
+                return;
+            }
             if (!IsServer || body == null || body.isKinematic || rollingDirection.sqrMagnitude < 0.001f)
                 return;
             var desiredVelocity = rollingDirection * movementSpeed;
@@ -639,6 +676,96 @@ namespace CoreKeepers
             ApplyImpulse(offset.normalized * Mathf.Min(distance, offset.magnitude));
         }
 
+        public void ApplyGravityVortex(Vector3 center, float strength, float duration)
+        {
+            if (!IsServer || !IsAlive || duration <= 0f) return;
+            gravityVortexCenter = new Vector3(center.x, transform.position.y, center.z);
+            gravityVortexStrength = Mathf.Max(gravityVortexStrength, strength);
+            gravityVortexEndsAt = System.Math.Max(gravityVortexEndsAt,
+                NetworkManager.ServerTime.Time + duration);
+            if (gravityVortexActive) return;
+
+            gravityVortexActive = true;
+            gravityVortexRecoveryActive = false;
+            gravityVortexWasPhysicsRoll = proceduralAnimator != null && proceduralAnimator.UsesPhysicsRolling;
+            var forward = transform.forward;
+            forward.y = 0f;
+            gravityVortexUprightRotation = forward.sqrMagnitude > 0.001f
+                ? Quaternion.LookRotation(forward.normalized, Vector3.up)
+                : Quaternion.identity;
+            rollingDirection = Vector3.zero;
+            bypassingBarricade = false;
+            pendingProjectileTarget = null;
+            if (agent != null && agent.enabled)
+            {
+                if (agent.isOnNavMesh) agent.ResetPath();
+                agent.enabled = false;
+            }
+            if (body != null)
+            {
+                body.isKinematic = false;
+                body.useGravity = true;
+                body.interpolation = RigidbodyInterpolation.Interpolate;
+            }
+            animationState.Value = EnemyAnimationState.Idle;
+            animationStartedAt.Value = NetworkManager.ServerTime.Time;
+            animationEndsAt.Value = NetworkManager.ServerTime.Time;
+        }
+
+        private bool UpdateGravityVortex(double now)
+        {
+            if (gravityVortexActive && now < gravityVortexEndsAt)
+            {
+                rollingDirection = Vector3.zero;
+                animationState.Value = EnemyAnimationState.Idle;
+                return true;
+            }
+
+            if (gravityVortexActive)
+            {
+                gravityVortexActive = false;
+                gravityVortexStrength = 0f;
+                gravityVortexRecoveryActive = true;
+                gravityVortexRecoveryStartedAt = now;
+                gravityVortexRecoveryStart = transform.position;
+                gravityVortexRecoveryStartRotation = transform.rotation;
+                gravityVortexRecoveryTarget = transform.position;
+                if (NavMesh.SamplePosition(transform.position, out var recoveryHit, 2.5f, NavMesh.AllAreas))
+                    gravityVortexRecoveryTarget = recoveryHit.position;
+                if (body != null)
+                {
+                    body.linearVelocity = Vector3.zero;
+                    body.angularVelocity = Vector3.zero;
+                    body.isKinematic = true;
+                    body.useGravity = false;
+                }
+            }
+
+            if (!gravityVortexRecoveryActive) return false;
+            const float recoveryDuration = 0.4f;
+            var progress = Mathf.Clamp01((float)((now - gravityVortexRecoveryStartedAt) / recoveryDuration));
+            var eased = Mathf.SmoothStep(0f, 1f, progress);
+            transform.position = Vector3.Lerp(gravityVortexRecoveryStart, gravityVortexRecoveryTarget, eased);
+            transform.rotation = Quaternion.Slerp(gravityVortexRecoveryStartRotation,
+                gravityVortexUprightRotation, eased);
+            if (progress < 1f) return true;
+
+            gravityVortexRecoveryActive = false;
+            if (body != null)
+            {
+                body.position = gravityVortexRecoveryTarget;
+                body.rotation = gravityVortexUprightRotation;
+                body.isKinematic = !gravityVortexWasPhysicsRoll;
+                body.useGravity = gravityVortexWasPhysicsRoll;
+            }
+            if (!gravityVortexWasPhysicsRoll && agent != null)
+            {
+                agent.enabled = true;
+                if (agent.isOnNavMesh) agent.ResetPath();
+            }
+            return false;
+        }
+
         private void ForceHero(NetworkWarrior hero, float duration, bool taunt)
         {
             forcedHero = hero;
@@ -837,6 +964,14 @@ namespace CoreKeepers
 
         private Vector3 ClosestTargetPoint(NetworkObject target)
         {
+            var building = target.GetComponent<CoreBuilding>();
+            if (building != null)
+            {
+                var footprintCollider = target.GetComponent<Collider>();
+                if (footprintCollider != null && footprintCollider.enabled && !footprintCollider.isTrigger)
+                    return footprintCollider.ClosestPoint(transform.position);
+            }
+
             var closestPoint = target.transform.position;
             var closestSqrDistance = HorizontalSqrDistance(closestPoint);
             var targetColliders = target == currentTarget

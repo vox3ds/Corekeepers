@@ -927,7 +927,7 @@ MonoBehaviour:
   interactionRange: 3
   constructionPower: 15
   startingLevel: 1
-  configuredMaximumHealth: 85
+  configuredMaximumHealth: 100
 --- !u!114 &8290210935015875598
 MonoBehaviour:
   m_ObjectHideFlags: 0

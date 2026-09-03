@@ -100,7 +100,8 @@ namespace CoreKeepers
         private bool earthshatterImpactApplied;
 
         public int SelectedSlot => selectedSlot;
-        public bool BlocksLocalGameplay => SkillUpgradePopupUI.Instance != null && SkillUpgradePopupUI.Instance.IsOpen;
+        public bool BlocksLocalGameplay => hero != null && hero.IsGravityVortexed ||
+            SkillUpgradePopupUI.Instance != null && SkillUpgradePopupUI.Instance.IsOpen;
 
         private void Awake() => hero = GetComponent<NetworkWarrior>();
 
@@ -266,14 +267,18 @@ namespace CoreKeepers
             NetworkObject requestedTarget, out float effectiveCooldown)
         {
             effectiveCooldown = 0f;
-            if (!hero.IsServer || hero.IsDowned || definition == null || definition.HeroClass != hero.PlayerClass ||
+            if (!hero.IsServer || hero.IsDowned || hero.IsGravityVortexed || definition == null ||
+                definition.HeroClass != hero.PlayerClass ||
                 hero.CurrentAction == WarriorAction.Whirlwind ||
                 definition.SkillType == HeroSkillType.Passive ||
                 (definition.SkillType != HeroSkillType.Basic && !acquired.Contains(definition.StableId))) return false;
             var now = hero.NetworkManager.ServerTime.Time;
             if (serverReadyAt.TryGetValue(definition.StableId, out var readyAt) && now < readyAt) return false;
-            if (!Execute(definition, requestedPosition, requestedTarget, now)) return false;
-            hero.ServerPresentSkill(definition, requestedPosition, requestedTarget);
+            var executionPosition = definition.StableId is 102 or 110 or 111
+                ? new Vector3(requestedPosition.x, 0f, requestedPosition.z)
+                : requestedPosition;
+            if (!Execute(definition, executionPosition, requestedTarget, now)) return false;
+            hero.ServerPresentSkill(definition, executionPosition, requestedTarget);
             effectiveCooldown = GetEffectiveServerCooldown(definition);
             serverReadyAt[definition.StableId] = now + effectiveCooldown;
             if (definition.SkillType == HeroSkillType.Active && acquired.Contains(112))
@@ -556,6 +561,12 @@ namespace CoreKeepers
                 building.Damage(amount);
                 hit = true;
             }
+            var core = skill.StableId is 102 or 110 ? CoreInRadius(center, skill.Radius) : null;
+            if (core != null)
+            {
+                core.Damage(amount);
+                hit = true;
+            }
             return hit;
         }
 
@@ -648,7 +659,10 @@ namespace CoreKeepers
             var origin = hero.transform.position + Vector3.up * 0.75f;
             var aimPoint = target != null ? target.transform.position + Vector3.up * 0.75f : point + Vector3.up * 0.75f;
             var direction = aimPoint - origin;
+            direction.y = 0f;
             if (direction.sqrMagnitude < 0.001f) direction = hero.transform.forward;
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.001f) direction = Vector3.forward;
             direction.Normalize();
             hero.ServerFace(origin + direction);
             pendingArcaneBolts.Add(new PendingArcaneBolt
@@ -840,16 +854,18 @@ namespace CoreKeepers
                     }
                     var enemy = hit.collider.GetComponentInParent<EnemyBrain>();
                     var dummy = hit.collider.GetComponentInParent<CoreDebugDummy>();
-                    if (enemy != null && enemy.IsAlive)
+                    if (enemy != null)
                     {
+                        if (!enemy.IsAlive) continue;
                         DealDamage(bolt.Skill, enemy);
                         hero.ServerPresentProjectileImpact(bolt.Skill.StableId,
                             hit.point - bolt.Direction * 0.06f, bolt.Direction);
                         consumed = true;
                         break;
                     }
-                    if (dummy != null && dummy.Health > 0f)
+                    if (dummy != null)
                     {
+                        if (dummy.Health <= 0f) continue;
                         dummy.TakeDamage(ArcaneBoltDamage(bolt.Skill));
                         hero.ServerPresentProjectileImpact(bolt.Skill.StableId,
                             hit.point - bolt.Direction * 0.06f, bolt.Direction);
@@ -889,6 +905,13 @@ namespace CoreKeepers
                 var projectile = pendingProjectiles[index];
                 if ((projectile.Target != null && !projectile.Target.IsAlive) || now >= projectile.ExpiresAt)
                 {
+                    var dismissTarget = projectile.Target != null
+                        ? projectile.Target.transform.position + Vector3.up * 0.75f
+                        : projectile.TargetPoint + Vector3.up * 0.75f;
+                    var dismissDirection = dismissTarget - projectile.Position;
+                    if (dismissDirection.sqrMagnitude < 0.001f) dismissDirection = hero.transform.forward;
+                    hero.ServerDismissProjectile(projectile.Skill.StableId, projectile.Position,
+                        dismissDirection.normalized);
                     pendingProjectiles.RemoveAt(index);
                     continue;
                 }
@@ -934,6 +957,10 @@ namespace CoreKeepers
                 if (hit.collider == null) continue;
                 var hitHero = hit.collider.GetComponentInParent<NetworkWarrior>();
                 if (hitHero == hero) continue;
+                var hitEnemy = hit.collider.GetComponentInParent<EnemyBrain>();
+                if (hitEnemy != null && !hitEnemy.IsAlive) continue;
+                var hitDummy = hit.collider.GetComponentInParent<CoreDebugDummy>();
+                if (hitDummy != null && hitDummy.Health <= 0f) continue;
                 obstacleHit = hit;
                 return true;
             }
@@ -973,6 +1000,7 @@ namespace CoreKeepers
                     enemy.ApplyDebuff(EnemyDebuff.OnFire, 2f, hero);
                 foreach (var building in BuildingsInRadius(patch.Position, patch.Radius))
                     building.Damage(fireDamagePerSecond * (float)tickInterval);
+                CoreInRadius(patch.Position, patch.Radius)?.Damage(fireDamagePerSecond * (float)tickInterval);
             }
         }
 
@@ -1091,8 +1119,8 @@ namespace CoreKeepers
                 var zone = activeZones[index];
                 if (now >= zone.EndsAt) { activeZones.RemoveAt(index); continue; }
                 if (now < zone.NextTick) continue;
-                zone.NextTick = now + 1d;
                 var skill = zone.Skill;
+                zone.NextTick = now + (skill.Effect == HeroSkillEffect.Vortex ? 0.33d : 1d);
                 if (skill.Effect == HeroSkillEffect.HealingArea || skill.Effect == HeroSkillEffect.Sanctuary)
                 {
                     foreach (var ally in HeroesInRadius(zone.Position, skill.Radius))
@@ -1107,7 +1135,16 @@ namespace CoreKeepers
                 else if (skill.Effect == HeroSkillEffect.Vortex)
                 {
                     foreach (var enemy in EnemiesInRadius(zone.Position, skill.Radius))
-                    { DealDamage(skill, enemy); enemy.PullToward(zone.Position, skill.SecondaryValue); }
+                    {
+                        enemy.TakeDamage(1f, hero, true);
+                        enemy.ApplyGravityVortex(zone.Position, skill.SecondaryValue, 0.45f);
+                    }
+                    foreach (var affectedHero in HeroesInRadius(zone.Position, skill.Radius))
+                    {
+                        if (affectedHero.IsDowned) continue;
+                        affectedHero.TakeDamage(1f);
+                        affectedHero.ServerApplyGravityVortex(zone.Position, skill.SecondaryValue, 0.45f);
+                    }
                 }
                 else if (skill.Effect == HeroSkillEffect.BuildingBuff)
                 {
@@ -1169,6 +1206,21 @@ namespace CoreKeepers
                 (ally.transform.position - center).sqrMagnitude <= radius * radius);
         private static IEnumerable<CoreBuilding> BuildingsInRadius(Vector3 center, float radius) =>
             FindObjectsByType<CoreBuilding>(FindObjectsSortMode.None).Where(building => building.IsSpawned &&
-                (building.transform.position - center).sqrMagnitude <= radius * radius);
+                HorizontalSqrDistance(building.transform.position, center) <= radius * radius);
+
+        private static CoreDebugDeposit CoreInRadius(Vector3 center, float radius)
+        {
+            var core = CoreDebugDeposit.Instance;
+            if (core == null || !core.IsSpawned) return null;
+            var offset = core.transform.position - center;
+            offset.y = 0f;
+            return offset.sqrMagnitude <= radius * radius ? core : null;
+        }
+
+        private static float HorizontalSqrDistance(Vector3 left, Vector3 right)
+        {
+            var offset = left - right;
+            return offset.x * offset.x + offset.z * offset.z;
+        }
     }
 }

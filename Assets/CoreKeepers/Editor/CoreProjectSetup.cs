@@ -178,6 +178,8 @@ namespace CoreKeepers.Editor
         private static GameObject[] CreateBuildingPrefabs()
         {
             var result = new GameObject[5];
+            var healthBarBackground = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/buildingHealthBarBG.png");
+            var healthBarFill = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/buildingHealthBar.png");
             var foundationMaterial = CreateMaterial("BuildingFoundation.mat", new Color(0.55f, 0.48f, 0.38f), 0.05f, 0.25f);
             var stone = CreateMaterial("BuildingStone.mat", new Color(0.75f, 0.72f, 0.64f), 0.1f, 0.35f);
             var gold = CreateMaterial("BuildingGold.mat", new Color(0.9f, 0.58f, 0.1f), 0.7f, 0.7f);
@@ -205,7 +207,7 @@ namespace CoreKeepers.Editor
                 completed.transform.SetParent(root.transform, false);
                 BuildCompletedVisual(type, completed.transform, stone, gold, ruby);
                 var building = root.AddComponent<CoreBuilding>();
-                building.Configure(type, foundation, completed);
+                building.Configure(type, foundation, completed, healthBarBackground, healthBarFill);
                 completed.SetActive(false);
 
                 var path = $"{BuildingPrefabDirectory}/{type}.prefab";

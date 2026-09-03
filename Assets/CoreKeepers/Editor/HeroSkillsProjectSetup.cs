@@ -127,10 +127,10 @@ namespace CoreKeepers.Editor
 
         private static void ConfigurePlayerPrefabs()
         {
-            ConfigurePlayer("Assets/CoreKeepers/Resources/CoreWarrior.prefab", 150f, 30f, 1.2f);
-            ConfigurePlayer("Assets/CoreKeepers/Resources/CoreMage.prefab", 85f, 45f, 1.5f);
-            ConfigurePlayer("Assets/CoreKeepers/Resources/CoreBuilder.prefab", 115f, 35f, 1f);
-            ConfigurePlayer("Assets/CoreKeepers/Resources/CoreHealer.prefab", 100f, 25f, 1.4f);
+            ConfigurePlayer("Assets/CoreKeepers/Resources/CoreWarrior.prefab", 250f, 30f, 1.2f);
+            ConfigurePlayer("Assets/CoreKeepers/Resources/CoreMage.prefab", 100f, 45f, 1.5f);
+            ConfigurePlayer("Assets/CoreKeepers/Resources/CoreBuilder.prefab", 180f, 35f, 1f);
+            ConfigurePlayer("Assets/CoreKeepers/Resources/CoreHealer.prefab", 140f, 25f, 1.4f);
         }
 
         private static void ConfigurePlayer(string path, float maximumHealth, float damage, float attackCooldown)
@@ -243,7 +243,7 @@ namespace CoreKeepers.Editor
             yield return new Spec(12, "Against the Horde", CorePlayerClass.Warrior, passive, 6, 0, self, pass, .35f, 7f, 3f, 10);
             yield return new Spec(13, "Executioner", CorePlayerClass.Warrior, passive, 6, 0, self, pass, .5f, 0, 0, .25f);
 
-            yield return new Spec(101, "Arcane Bolt", CorePlayerClass.Mage, basic, 0, 1.5f, enemy, HeroSkillEffect.SingleProjectile, 45, 32f);
+            yield return new Spec(101, "Arcane Bolt", CorePlayerClass.Mage, basic, 0, 0.7f, enemy, HeroSkillEffect.SingleProjectile, 45, 32f);
             yield return new Spec(102, "Fireball", CorePlayerClass.Mage, active, 1, 8, enemy, HeroSkillEffect.ExplodingProjectile, 58, 1.75f, 5f, 16f, 1, EnemyDebuff.OnFire);
             yield return new Spec(103, "Frost Nova", CorePlayerClass.Mage, active, 1, 10, self, HeroSkillEffect.RadialDebuff, 30, 4.5f, 5f, 0, 1, EnemyDebuff.Chill);
             yield return new Spec(104, "Arcane Power", CorePlayerClass.Mage, passive, 2, 0, self, pass, .2f);

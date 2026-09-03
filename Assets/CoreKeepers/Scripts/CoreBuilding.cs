@@ -64,6 +64,8 @@ namespace CoreKeepers
         [SerializeField] private GameObject foundationVisual;
         [SerializeField] private GameObject completedVisual;
         [SerializeField, Min(1)] private int maximumLevel = 3;
+        [SerializeField] private Sprite healthBarBackgroundSprite;
+        [SerializeField] private Sprite healthBarFillSprite;
 
         private readonly NetworkVariable<CoreBuildingState> state = new(CoreBuildingState.UnderConstruction);
         private readonly NetworkVariable<int> constructionPoints = new(0);
@@ -75,6 +77,8 @@ namespace CoreKeepers
         private Transform buildProgressRoot;
         private Transform constructionProgressBarRoot;
         private Image constructionProgressBarFill;
+        private RectTransform healthBarRoot;
+        private Image healthBarFill;
         private double nextAttackAt;
         private readonly Dictionary<ulong, TimedModifier> timedModifiers = new();
         private static readonly string[] BuildProgressNames =
@@ -104,15 +108,20 @@ namespace CoreKeepers
         {
             CacheBuildProgressStages();
             CacheConstructionProgressBar();
+            CreateHealthBar();
         }
 
-        public void Configure(CoreBuildingType type, GameObject foundation, GameObject completed)
+        public void Configure(CoreBuildingType type, GameObject foundation, GameObject completed,
+            Sprite healthBarBackground, Sprite healthBarForeground)
         {
             buildingType = type;
             foundationVisual = foundation;
             completedVisual = completed;
+            healthBarBackgroundSprite = healthBarBackground;
+            healthBarFillSprite = healthBarForeground;
             CacheBuildProgressStages();
             CacheConstructionProgressBar();
+            CreateHealthBar();
         }
 
         public override void OnNetworkSpawn()
@@ -127,6 +136,7 @@ namespace CoreKeepers
             }
             CacheBuildProgressStages();
             CacheConstructionProgressBar();
+            CreateHealthBar();
             RefreshVisuals();
         }
 
@@ -266,11 +276,11 @@ namespace CoreKeepers
             if (completedVisual != null)
             {
                 completedVisual.SetActive(completed);
-                var pulse = state.Value == CoreBuildingState.Damaged ? 0.92f + Mathf.Sin(Time.time * 8f) * 0.04f : 1f;
-                completedVisual.transform.localScale = Vector3.one * pulse;
+                completedVisual.transform.localScale = Vector3.one;
             }
             RefreshBuildProgress(completed);
             RefreshConstructionProgressBar(completed);
+            RefreshHealthBar(completed);
         }
 
         private void CacheBuildProgressStages()
@@ -333,6 +343,87 @@ namespace CoreKeepers
                 constructionProgressBarFill.fillAmount = ratio;
             if (constructionProgressBarRoot.gameObject.activeSelf != !completed)
                 constructionProgressBarRoot.gameObject.SetActive(!completed);
+        }
+
+        private void CreateHealthBar()
+        {
+            if (healthBarRoot != null)
+                return;
+
+            var existingRoot = FindDeepChild(transform, "BuildingHealthBar") as RectTransform;
+            if (existingRoot != null)
+            {
+                healthBarRoot = existingRoot;
+                var existingFill = FindDirectChild(healthBarRoot, "Fill");
+                healthBarFill = existingFill != null ? existingFill.GetComponent<Image>() : null;
+                return;
+            }
+
+            if (healthBarBackgroundSprite == null || healthBarFillSprite == null)
+                return;
+
+            var rootObject = new GameObject("BuildingHealthBar", typeof(RectTransform), typeof(Canvas),
+                typeof(CanvasScaler));
+            healthBarRoot = (RectTransform)rootObject.transform;
+            healthBarRoot.SetParent(transform, false);
+            healthBarRoot.sizeDelta = new Vector2(1.4f, 0.45f);
+
+            var constructionCanvas = constructionProgressBarRoot != null
+                ? constructionProgressBarRoot.GetComponentInChildren<Canvas>(true)
+                : null;
+            healthBarRoot.position = constructionCanvas != null
+                ? constructionCanvas.transform.position + Vector3.up * 0.3f
+                : transform.position + Vector3.up * 2.4f;
+
+            var canvas = rootObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.sortingOrder = 20;
+            rootObject.GetComponent<CanvasScaler>().dynamicPixelsPerUnit = 100f;
+
+            var background = CreateHealthBarImage("Background", healthBarRoot, healthBarBackgroundSprite);
+            background.rectTransform.anchorMin = Vector2.zero;
+            background.rectTransform.anchorMax = Vector2.one;
+            background.rectTransform.sizeDelta = Vector2.zero;
+
+            healthBarFill = CreateHealthBarImage("Fill", healthBarRoot, healthBarFillSprite);
+            healthBarFill.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            healthBarFill.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            healthBarFill.rectTransform.sizeDelta = new Vector2(1.17f, 0.21f);
+            healthBarFill.type = Image.Type.Filled;
+            healthBarFill.fillMethod = Image.FillMethod.Horizontal;
+            healthBarFill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            healthBarRoot.gameObject.SetActive(false);
+        }
+
+        private static Image CreateHealthBarImage(string objectName, Transform parent, Sprite sprite)
+        {
+            var imageObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rect = (RectTransform)imageObject.transform;
+            rect.SetParent(parent, false);
+            var image = imageObject.GetComponent<Image>();
+            image.sprite = sprite;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private void RefreshHealthBar(bool completed)
+        {
+            if (healthBarRoot == null)
+                CreateHealthBar();
+            if (healthBarRoot == null || healthBarFill == null)
+                return;
+
+            var healthRatio = MaximumHealth > 0f ? Mathf.Clamp01(health.Value / MaximumHealth) : 0f;
+            var visible = completed && healthRatio < 0.95f;
+            if (healthBarRoot.gameObject.activeSelf != visible)
+                healthBarRoot.gameObject.SetActive(visible);
+            if (!visible)
+                return;
+
+            healthBarFill.fillAmount = healthRatio;
+            var camera = Camera.main;
+            if (camera != null)
+                healthBarRoot.rotation = camera.transform.rotation;
         }
 
         private static Transform FindDirectChild(Transform root, string childName)

@@ -17,7 +17,7 @@ MonoBehaviour:
   heroClass: 1
   skillType: 0
   unlockWave: 0
-  cooldown: 1.5
+  cooldown: 0.7
   icon64: {fileID: 21300000, guid: 910c1b8483b0c274498a53600c515fe3, type: 3}
   icon256: {fileID: 21300000, guid: e0a37dc9c35747b49b562e307af72b48, type: 3}
   description: "Arcane Bolt \u2014 Basic skill unlocked at wave 0. Values are editable

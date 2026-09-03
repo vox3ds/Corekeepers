@@ -25,6 +25,7 @@ namespace CoreKeepers
         Explosion9x9,
         EnergyExplosion8x8,
         EnergyExplosion5x4,
+        Electric3x4,
         DarkEnergy8x5,
         Flame8x4,
         Fireball8x5,
@@ -68,10 +69,9 @@ namespace CoreKeepers
                     break;
                 case HeroSkillEffect.ChainDamage:
                     SpawnLightning(origin, targetPoint, color, 3f);
-                    SpawnBurst(targetPoint, color, 0.65f, CombatVfxAtlas.EnergyExplosion8x8);
+                    SpawnBurst(targetPoint, color, 0.65f, CombatVfxAtlas.Electric3x4);
                     break;
                 case HeroSkillEffect.Blink:
-                    SpawnBurst(origin, color, 1.1f, CombatVfxAtlas.EnergyExplosion5x4);
                     break;
                 case HeroSkillEffect.GroundImpact:
                     if (skill.StableId == 110)
@@ -83,8 +83,13 @@ namespace CoreKeepers
                     }
                     break;
                 case HeroSkillEffect.Vortex:
-                    SpawnRing(point, color, Mathf.Max(1f, skill.Radius), 0.8f);
-                    SpawnBurst(point + Vector3.up * 0.2f, color, 1.5f, CombatVfxAtlas.DarkEnergy8x5);
+                    if (skill.StableId == 111)
+                        SpawnGravityVortex(point, Mathf.Max(1f, skill.Radius), Mathf.Max(0.5f, skill.Duration));
+                    else
+                    {
+                        SpawnRing(point, color, Mathf.Max(1f, skill.Radius), 0.8f);
+                        SpawnBurst(point + Vector3.up * 0.2f, color, 1.5f, CombatVfxAtlas.DarkEnergy8x5);
+                    }
                     break;
                 case HeroSkillEffect.RadialDamage:
                 case HeroSkillEffect.RadialDebuff:
@@ -138,7 +143,7 @@ namespace CoreKeepers
                     SpawnFrostNova(subject.position, 4.5f); break;
                 case CombatVfxPreview.ChainLightning:
                     SpawnLightning(center, destination, Frost, 3f);
-                    SpawnBurst(destination, Frost, 0.7f, CombatVfxAtlas.EnergyExplosion8x8); break;
+                    SpawnBurst(destination, Frost, 0.7f, CombatVfxAtlas.Electric3x4); break;
                 case CombatVfxPreview.Heal:
                     SpawnRing(subject.position, Holy, 3f, 0.9f);
                     SpawnBurst(center, Holy, 1.1f, CombatVfxAtlas.EnergyExplosion5x4); break;
@@ -148,8 +153,7 @@ namespace CoreKeepers
                 case CombatVfxPreview.GroundImpact:
                     SpawnMeteorStrike(subject.position, 3.5f, 5f, 2f); break;
                 case CombatVfxPreview.Vortex:
-                    SpawnRing(subject.position, Arcane, 4.5f, 1.2f);
-                    SpawnBurst(center, Arcane, 1.5f, CombatVfxAtlas.DarkEnergy8x5); break;
+                    SpawnGravityVortex(subject.position, 4.5f, 6f); break;
                 default:
                     SpawnBurst(center, Color.white, 0.75f); break;
             }
@@ -161,6 +165,7 @@ namespace CoreKeepers
             direction.Normalize();
             if (stableId == 102)
             {
+                position.y = 0f;
                 HeroProjectileVisual.ResolveFireballImpact(position, direction);
                 return;
             }
@@ -172,7 +177,10 @@ namespace CoreKeepers
 
         public static void DismissProjectile(int stableId, Vector3 position, Vector3 direction)
         {
-            if (stableId == 101) HeroProjectileVisual.ResolveArcaneImpact(position, direction);
+            if (stableId == 101)
+                HeroProjectileVisual.ResolveArcaneImpact(position, direction);
+            else
+                HeroProjectileVisual.ResolveProjectileDismiss(position, direction);
         }
 
         public static void SetCharacterBurning(Transform subject, bool active)
@@ -366,6 +374,7 @@ namespace CoreKeepers
 
         internal static void SpawnFireballImpact(Vector3 groundPosition, float radius, float duration)
         {
+            groundPosition.y = 0f;
             radius = Mathf.Max(0.5f, radius);
             duration = Mathf.Max(1f, duration);
             SpawnBurst(groundPosition + Vector3.up * 0.45f, Fire, 1.65f, CombatVfxAtlas.Explosion9x9);
@@ -376,6 +385,7 @@ namespace CoreKeepers
         private static void SpawnMeteorStrike(Vector3 groundPosition, float radius, float groundDuration,
             float impactDelay)
         {
+            groundPosition.y = 0f;
             var prefab = Resources.Load<GameObject>("VFX/MeteorStrikeVfx");
             if (prefab == null)
             {
@@ -392,9 +402,133 @@ namespace CoreKeepers
 
         private static void SpawnFrostNova(Vector3 position, float radius)
         {
-            SpawnRing(position, Frost, radius, 0.78f, 10f);
+            // Layer the nova like a sheet of ice breaking from a white-hot centre:
+            // a fast outer shockwave, a tighter glassy ring and visible ground fractures.
+            SpawnRing(position, new Color(0.34f, 0.86f, 1f), radius, 0.82f, 11f);
+            SpawnRing(position + Vector3.up * 0.025f, Color.white, radius * 0.72f, 0.64f, 14f);
+            SpawnBurst(position + Vector3.up * 0.28f, Color.white,
+                Mathf.Clamp(radius * 0.36f, 1.2f, 2f), CombatVfxAtlas.EnergyExplosion5x4);
+            SpawnFrostGround(position, radius);
+            SpawnFrostFractures(position, radius);
+            SpawnFrostShards(position, radius);
             SpawnFrostWind(position, radius);
             SpawnFrostSpikes(position, radius);
+        }
+
+        private static void SpawnGravityVortex(Vector3 position, float radius, float duration)
+        {
+            position.y = 0f;
+            var vortexColor = new Color(0.78f, 0.04f, 1f, 1f);
+            SpawnBurst(position + Vector3.up * 0.16f, vortexColor,
+                Mathf.Clamp(radius * 0.5f, 1.5f, 2.5f), CombatVfxAtlas.DarkEnergy8x5);
+            var root = new GameObject("Gravity Vortex - Spiral Field");
+            root.transform.position = position + Vector3.up * 0.055f;
+            root.AddComponent<GravityVortexVisual>().Initialize(radius, duration);
+        }
+
+        private static void SpawnFrostGround(Vector3 position, float radius)
+        {
+            EnsureMaterialLibrary();
+            if (materialLibrary == null || materialLibrary.IceGround == null)
+            {
+                Debug.LogWarning("IceGround material is missing from the Combat VFX material library.");
+                return;
+            }
+
+            SpawnGroundQuad("Frost Nova - Ice Ground", position, radius, materialLibrary.IceGround, 15f, 3f);
+        }
+
+        internal static void SpawnMeteorGround(Vector3 position, float radius)
+        {
+            EnsureMaterialLibrary();
+            if (materialLibrary == null || materialLibrary.MeteorGround == null)
+            {
+                Debug.LogWarning("MeteorGround material is missing from the Combat VFX material library.");
+                return;
+            }
+
+            SpawnGroundQuad("Meteor Strike - Meteor Ground", position, radius, materialLibrary.MeteorGround,
+                15f, 3f);
+        }
+
+        private static void SpawnGroundQuad(string objectName, Vector3 position, float radius, Material material,
+            float fadeDelay, float fadeDuration)
+        {
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            ground.name = objectName;
+            var collider = ground.GetComponent<Collider>();
+            if (collider != null) UnityEngine.Object.Destroy(collider);
+            ground.transform.SetPositionAndRotation(new Vector3(position.x, 0.03f, position.z),
+                Quaternion.Euler(90f, 0f, 0f) *
+                Quaternion.AngleAxis(UnityEngine.Random.Range(0f, 360f), Vector3.forward));
+            ground.transform.localScale = Vector3.one * (Mathf.Max(1f, radius) * 2f);
+            var renderer = ground.GetComponent<Renderer>();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            ground.AddComponent<CombatGroundFade>().Initialize(material, fadeDelay, fadeDuration);
+        }
+
+        private static void SpawnFrostFractures(Vector3 position, float radius)
+        {
+            var root = new GameObject("Frost Nova - Cracked Ice");
+            root.transform.position = position + Vector3.up * 0.085f;
+            root.AddComponent<FrostNovaFractureVisual>().Initialize(radius);
+        }
+
+        private static void SpawnFrostShards(Vector3 position, float radius)
+        {
+            var root = new GameObject("Frost Nova - Ice Shards");
+            root.transform.position = position + Vector3.up * 0.2f;
+            var particles = root.AddComponent<ParticleSystem>();
+            particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = particles.main;
+            main.duration = 0.35f;
+            main.loop = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.42f, 0.78f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.055f, 0.18f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(-Mathf.PI, Mathf.PI);
+            main.startColor = new ParticleSystem.MinMaxGradient(Color.white,
+                new Color(0.22f, 0.78f, 1f, 1f));
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.gravityModifier = 0.24f;
+            main.stopAction = ParticleSystemStopAction.Destroy;
+            main.maxParticles = 96;
+
+            var emission = particles.emission;
+            emission.enabled = false;
+
+            var colorOverLifetime = particles.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(new Gradient
+            {
+                colorKeys = new[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(new Color(0.25f, 0.72f, 1f), 1f)
+                },
+                alphaKeys = new[]
+                {
+                    new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.06f),
+                    new GradientAlphaKey(0.9f, 0.58f), new GradientAlphaKey(0f, 1f)
+                }
+            });
+            var sizeOverLifetime = particles.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f,
+                AnimationCurve.EaseInOut(0f, 0.35f, 1f, 1f));
+
+            var renderer = particles.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.velocityScale = 0.035f;
+            renderer.lengthScale = 3.4f;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            var material = CreateMaterial(new Color(0.35f, 0.86f, 1f), true, 10f);
+            renderer.material = material;
+            root.AddComponent<CombatVfxMaterialCleanup>().Initialize(material);
+            root.AddComponent<FrostShardBurstController>().Initialize(particles, radius);
+            particles.Play();
         }
 
         private static void SpawnFrostWind(Vector3 position, float radius)
@@ -484,7 +618,7 @@ namespace CoreKeepers
                 spike.transform.SetParent(group.transform, true);
                 var rotation = Quaternion.Euler(-90f, angle, 0f);
                 spike.AddComponent<FrostSpikeVisual>().Initialize(groundPosition, rotation,
-                    UnityEngine.Random.Range(1.7f, 2.45f), index * 0.018f,
+                    UnityEngine.Random.Range(1.7f, 2.45f) / 3f, index * 0.018f,
                     spikesMaterial);
             }
         }
@@ -628,13 +762,7 @@ namespace CoreKeepers
         internal static bool TryGetAtlas(CombatVfxAtlas requested, Color color, out Material material,
             out int columns, out int rows)
         {
-            if (!materialLibraryLoaded)
-            {
-                materialLibraryLoaded = true;
-                materialLibrary = Resources.Load<CombatVfxMaterialLibrary>("VFX/CombatVfxMaterialLibrary");
-                if (materialLibrary == null)
-                    Debug.LogWarning("Combat VFX material library is missing. Procedural VFX fallback will be used.");
-            }
+            EnsureMaterialLibrary();
 
             if (requested == CombatVfxAtlas.Auto)
             {
@@ -648,6 +776,7 @@ namespace CoreKeepers
                 CombatVfxAtlas.Explosion9x9 => materialLibrary != null ? materialLibrary.Explosion9x9 : null,
                 CombatVfxAtlas.EnergyExplosion8x8 => materialLibrary != null ? materialLibrary.EnergyExplosion8x8 : null,
                 CombatVfxAtlas.EnergyExplosion5x4 => materialLibrary != null ? materialLibrary.EnergyExplosion5x4 : null,
+                CombatVfxAtlas.Electric3x4 => materialLibrary != null ? materialLibrary.Electric3x4 : null,
                 CombatVfxAtlas.DarkEnergy8x5 => materialLibrary != null ? materialLibrary.DarkEnergy8x5 : null,
                 CombatVfxAtlas.Flame8x4 => materialLibrary != null ? materialLibrary.Flame8x4 : null,
                 CombatVfxAtlas.Fireball8x5 => materialLibrary != null ? materialLibrary.Fireball8x5 : null,
@@ -659,6 +788,7 @@ namespace CoreKeepers
                 CombatVfxAtlas.Explosion9x9 => (9, 9),
                 CombatVfxAtlas.EnergyExplosion8x8 => (8, 8),
                 CombatVfxAtlas.EnergyExplosion5x4 => (5, 4),
+                CombatVfxAtlas.Electric3x4 => (3, 4),
                 CombatVfxAtlas.DarkEnergy8x5 => (8, 5),
                 CombatVfxAtlas.Flame8x4 => (8, 4),
                 CombatVfxAtlas.Fireball8x5 => (8, 5),
@@ -666,6 +796,15 @@ namespace CoreKeepers
                 _ => (1, 1)
             };
             return material != null;
+        }
+
+        private static void EnsureMaterialLibrary()
+        {
+            if (materialLibraryLoaded) return;
+            materialLibraryLoaded = true;
+            materialLibrary = Resources.Load<CombatVfxMaterialLibrary>("VFX/CombatVfxMaterialLibrary");
+            if (materialLibrary == null)
+                Debug.LogWarning("Combat VFX material library is missing. Procedural VFX fallback will be used.");
         }
 
         internal static FireballParticleSettings GetFireballParticleSettings(bool smoke)
@@ -713,7 +852,7 @@ namespace CoreKeepers
         public static void PlayChainLightningSegment(Vector3 start, Vector3 end)
         {
             SpawnLightning(start, end, Arcane, 3f);
-            SpawnBurst(end, Arcane, 0.5f, CombatVfxAtlas.EnergyExplosion8x8);
+            SpawnBurst(end, Arcane, 0.5f, CombatVfxAtlas.Electric3x4);
         }
 
         private static void SpawnLightning(Vector3 start, Vector3 end, Color color, float glowScale = 1f)
@@ -747,6 +886,246 @@ namespace CoreKeepers
             if (skill.StableId is 102 or 110 or 113) return Fire;
             if (skill.StableId == 103) return Frost;
             return skill.HeroClass == CorePlayerClass.Mage ? Arcane : new Color(0.55f, 0.9f, 1f, 1f);
+        }
+    }
+
+    public sealed class GravityVortexVisual : MonoBehaviour
+    {
+        private readonly List<LineRenderer> arms = new();
+        private readonly List<float> armWidths = new();
+        private Material material;
+        private Light centerLight;
+        private float duration;
+        private float age;
+
+        public void Initialize(float requestedRadius, float requestedDuration)
+        {
+            var radius = Mathf.Max(1f, requestedRadius);
+            duration = Mathf.Max(0.5f, requestedDuration);
+            var violet = new Color(0.82f, 0.035f, 1f, 1f);
+            material = HeroCombatVfx.CreateMaterial(violet, true, 14f);
+
+            const int armCount = 9;
+            const int pointsPerArm = 42;
+            for (var armIndex = 0; armIndex < armCount; armIndex++)
+            {
+                var child = new GameObject($"Vortex Arm {armIndex + 1:00}");
+                child.transform.SetParent(transform, false);
+                var line = child.AddComponent<LineRenderer>();
+                line.useWorldSpace = false;
+                line.positionCount = pointsPerArm;
+                line.numCornerVertices = 4;
+                line.numCapVertices = 3;
+                line.sharedMaterial = material;
+                line.textureMode = LineTextureMode.Stretch;
+                line.startColor = Color.white * 2.4f;
+                line.endColor = violet * 1.8f;
+                var width = radius * UnityEngine.Random.Range(0.035f, 0.062f);
+                line.widthMultiplier = width;
+                line.widthCurve = new AnimationCurve(
+                    new Keyframe(0f, 0.05f), new Keyframe(0.18f, 1f),
+                    new Keyframe(0.72f, 0.5f), new Keyframe(1f, 0.02f));
+                line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                line.receiveShadows = false;
+
+                var armOffset = armIndex * 360f / armCount + UnityEngine.Random.Range(-8f, 8f);
+                var turns = UnityEngine.Random.Range(1.65f, 2.2f);
+                for (var pointIndex = 0; pointIndex < pointsPerArm; pointIndex++)
+                {
+                    var progress = pointIndex / (float)(pointsPerArm - 1);
+                    var curvedProgress = Mathf.Pow(progress, 0.72f);
+                    var distance = Mathf.Lerp(radius * 0.035f, radius, curvedProgress);
+                    var angle = armOffset + progress * turns * 360f;
+                    var wobble = Mathf.Sin(progress * Mathf.PI * 5f + armIndex) * radius * 0.018f;
+                    var direction = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+                    var tangent = Vector3.Cross(Vector3.up, direction);
+                    line.SetPosition(pointIndex, direction * distance + tangent * wobble);
+                }
+                arms.Add(line);
+                armWidths.Add(width);
+            }
+
+            centerLight = gameObject.AddComponent<Light>();
+            centerLight.type = LightType.Point;
+            centerLight.color = new Color(0.82f, 0.05f, 1f);
+            centerLight.intensity = 7f;
+            centerLight.range = radius * 1.35f;
+            centerLight.shadows = LightShadows.None;
+            transform.localScale = Vector3.one * 0.12f;
+        }
+
+        private void Update()
+        {
+            age += Time.deltaTime;
+            var reveal = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(age / 0.32f));
+            var fade = Mathf.SmoothStep(0f, 1f,
+                Mathf.InverseLerp(Mathf.Max(0f, duration - 1f), duration, age));
+            var scale = Mathf.Lerp(0.12f, 1f, reveal);
+            transform.localScale = Vector3.one * scale;
+            transform.Rotate(0f, (105f + Mathf.Sin(age * 2f) * 18f) * Time.deltaTime, 0f, Space.Self);
+
+            for (var index = 0; index < arms.Count; index++)
+            {
+                if (arms[index] == null) continue;
+                arms[index].widthMultiplier = armWidths[index] * (1f - fade);
+                var inner = Color.white * 2.4f;
+                inner.a = 1f - fade;
+                var outer = new Color(0.82f, 0.035f, 1f, 1f) * 1.8f;
+                outer.a = 1f - fade;
+                arms[index].startColor = inner;
+                arms[index].endColor = outer;
+            }
+            if (centerLight != null)
+                centerLight.intensity = (7f + Mathf.Sin(age * 7f) * 1.2f) * reveal * (1f - fade);
+            if (age >= duration) Destroy(gameObject);
+        }
+
+        private void OnDestroy()
+        {
+            if (material != null) Destroy(material);
+        }
+    }
+
+    public sealed class FrostNovaFractureVisual : MonoBehaviour
+    {
+        private sealed class CrackLine
+        {
+            public LineRenderer Renderer;
+            public Vector3[] Points;
+        }
+
+        private readonly List<CrackLine> cracks = new();
+        private Material material;
+        private Color crackColor;
+        private float age;
+
+        public void Initialize(float requestedRadius)
+        {
+            var radius = Mathf.Max(1f, requestedRadius);
+            crackColor = new Color(0.08f, 0.48f, 1f, 0.96f);
+            material = HeroCombatVfx.CreateMaterial(crackColor, true, 12f);
+            var angleOffset = UnityEngine.Random.Range(0f, 360f);
+
+            const int crackCount = 14;
+            for (var index = 0; index < crackCount; index++)
+            {
+                var angle = angleOffset + index * (360f / crackCount) + UnityEngine.Random.Range(-7f, 7f);
+                var direction = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+                var tangent = Vector3.Cross(Vector3.up, direction);
+                var pointCount = UnityEngine.Random.Range(4, 7);
+                var points = new Vector3[pointCount];
+                var endDistance = radius * UnityEngine.Random.Range(0.58f, 0.82f);
+                for (var pointIndex = 0; pointIndex < pointCount; pointIndex++)
+                {
+                    var progress = pointIndex / (float)(pointCount - 1);
+                    var distance = Mathf.Lerp(radius * UnityEngine.Random.Range(0.06f, 0.13f),
+                        endDistance, progress);
+                    var sideJitter = pointIndex == 0 ? 0f :
+                        UnityEngine.Random.Range(-0.09f, 0.09f) * radius * progress;
+                    points[pointIndex] = direction * distance + tangent * sideJitter;
+                }
+                CreateCrack($"Main Crack {index + 1:00}", points, radius * 0.007f);
+
+                // Short forks make the silhouette read as fractured ice instead of a sunburst.
+                if (index % 2 != 0) continue;
+                var forkOrigin = points[UnityEngine.Random.Range(1, pointCount - 1)];
+                var forkDirection = Quaternion.Euler(0f, UnityEngine.Random.Range(-48f, 48f), 0f) * direction;
+                CreateCrack($"Crack Fork {index + 1:00}", new[]
+                {
+                    forkOrigin,
+                    forkOrigin + forkDirection * radius * UnityEngine.Random.Range(0.1f, 0.18f) +
+                    tangent * UnityEngine.Random.Range(-0.04f, 0.04f) * radius,
+                    forkOrigin + forkDirection * radius * UnityEngine.Random.Range(0.2f, 0.3f)
+                }, radius * 0.0046667f);
+            }
+
+            transform.localScale = new Vector3(0.58f, 1f, 0.58f);
+        }
+
+        private void CreateCrack(string crackName, Vector3[] points, float width)
+        {
+            var child = new GameObject(crackName);
+            child.transform.SetParent(transform, false);
+            var line = child.AddComponent<LineRenderer>();
+            line.useWorldSpace = false;
+            line.positionCount = points.Length;
+            line.SetPositions(points);
+            line.widthMultiplier = width;
+            line.numCornerVertices = 1;
+            line.numCapVertices = 1;
+            line.sharedMaterial = material;
+            line.startColor = crackColor;
+            line.endColor = new Color(crackColor.r, crackColor.g, crackColor.b, crackColor.a * 0.42f);
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            cracks.Add(new CrackLine { Renderer = line, Points = points });
+        }
+
+        private void Update()
+        {
+            age += Time.deltaTime;
+            var reveal = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(age / 0.18f));
+            var erase = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.42f, 1.8f, age));
+            var scale = Mathf.Lerp(0.58f, 1f, reveal);
+            transform.localScale = new Vector3(scale, 1f, scale);
+            for (var index = 0; index < cracks.Count; index++)
+            {
+                var crack = cracks[index];
+                if (crack.Renderer == null) continue;
+                EraseFromStart(crack, erase);
+                var start = crackColor;
+                start.a *= reveal * Mathf.Lerp(1f, 0.18f, erase);
+                var end = start;
+                end.a *= 0.42f;
+                crack.Renderer.startColor = start;
+                crack.Renderer.endColor = end;
+            }
+            if (age >= 1.8f) Destroy(gameObject);
+        }
+
+        private static void EraseFromStart(CrackLine crack, float progress)
+        {
+            var points = crack.Points;
+            if (points == null || points.Length < 2) return;
+            var scaledProgress = Mathf.Clamp01(progress) * (points.Length - 1);
+            var segment = Mathf.Min(Mathf.FloorToInt(scaledProgress), points.Length - 2);
+            var segmentProgress = scaledProgress - segment;
+            var remainingPointCount = points.Length - segment;
+            crack.Renderer.positionCount = remainingPointCount;
+            crack.Renderer.SetPosition(0, Vector3.Lerp(points[segment], points[segment + 1], segmentProgress));
+            for (var index = 1; index < remainingPointCount; index++)
+                crack.Renderer.SetPosition(index, points[segment + index]);
+        }
+
+        private void OnDestroy()
+        {
+            if (material != null) Destroy(material);
+        }
+    }
+
+    public sealed class FrostShardBurstController : MonoBehaviour
+    {
+        public void Initialize(ParticleSystem particles, float requestedRadius)
+        {
+            var radius = Mathf.Max(1f, requestedRadius);
+            var count = Mathf.Clamp(Mathf.RoundToInt(radius * 13f), 42, 72);
+            var angleOffset = UnityEngine.Random.Range(0f, 360f);
+            for (var index = 0; index < count; index++)
+            {
+                var angle = angleOffset + index * (360f / count) + UnityEngine.Random.Range(-4f, 4f);
+                var direction = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+                var emit = new ParticleSystem.EmitParams
+                {
+                    position = transform.position + direction * UnityEngine.Random.Range(0.05f, radius * 0.2f),
+                    velocity = direction * UnityEngine.Random.Range(radius * 1.6f, radius * 2.75f) +
+                               Vector3.up * UnityEngine.Random.Range(0.3f, 1.25f),
+                    startSize = UnityEngine.Random.Range(0.055f, 0.18f),
+                    startLifetime = UnityEngine.Random.Range(0.42f, 0.78f),
+                    startColor = Color.Lerp(Color.white, new Color(0.22f, 0.78f, 1f),
+                        UnityEngine.Random.Range(0.15f, 0.75f))
+                };
+                particles.Emit(emit, 1);
+            }
         }
     }
 
@@ -1065,6 +1444,68 @@ namespace CoreKeepers
         }
     }
 
+    public sealed class CombatGroundFade : MonoBehaviour
+    {
+        private Material runtimeMaterial;
+        private Color baseColor = Color.white;
+        private float fadeDelay;
+        private float fadeDuration;
+        private float age;
+
+        public void Initialize(Material source, float requestedFadeDelay, float requestedFadeDuration)
+        {
+            fadeDelay = Mathf.Max(0f, requestedFadeDelay);
+            fadeDuration = Mathf.Max(0.05f, requestedFadeDuration);
+            runtimeMaterial = new Material(source) { hideFlags = HideFlags.DontSave };
+            ConfigureTransparentSurface(runtimeMaterial);
+
+            var renderer = GetComponent<Renderer>();
+            renderer.sharedMaterial = runtimeMaterial;
+            if (runtimeMaterial.HasProperty("_BaseColor"))
+                baseColor = runtimeMaterial.GetColor("_BaseColor");
+            else if (runtimeMaterial.HasProperty("_Color"))
+                baseColor = runtimeMaterial.GetColor("_Color");
+        }
+
+        private static void ConfigureTransparentSurface(Material target)
+        {
+            if (target.HasProperty("_Surface")) target.SetFloat("_Surface", 1f);
+            if (target.HasProperty("_Blend")) target.SetFloat("_Blend", 0f);
+            if (target.HasProperty("_SrcBlend"))
+                target.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (target.HasProperty("_DstBlend"))
+                target.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (target.HasProperty("_SrcBlendAlpha"))
+                target.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+            if (target.HasProperty("_DstBlendAlpha"))
+                target.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (target.HasProperty("_ZWrite")) target.SetFloat("_ZWrite", 0f);
+            target.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            target.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            target.SetOverrideTag("RenderType", "Transparent");
+            target.SetShaderPassEnabled("ShadowCaster", false);
+            target.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        }
+
+        private void Update()
+        {
+            age += Time.deltaTime;
+            if (age < fadeDelay) return;
+
+            var progress = Mathf.Clamp01((age - fadeDelay) / fadeDuration);
+            var faded = baseColor;
+            faded.a *= 1f - Mathf.SmoothStep(0f, 1f, progress);
+            if (runtimeMaterial.HasProperty("_BaseColor")) runtimeMaterial.SetColor("_BaseColor", faded);
+            if (runtimeMaterial.HasProperty("_Color")) runtimeMaterial.SetColor("_Color", faded);
+            if (progress >= 1f) Destroy(gameObject);
+        }
+
+        private void OnDestroy()
+        {
+            if (runtimeMaterial != null) Destroy(runtimeMaterial);
+        }
+    }
+
     public sealed class HeroProjectileVisual : MonoBehaviour
     {
         private const float Speed = 13f;
@@ -1318,6 +1759,26 @@ namespace CoreKeepers
             if (closest != null) closest.CompleteFireballImpact(groundPosition);
         }
 
+        public static void ResolveProjectileDismiss(Vector3 position, Vector3 direction)
+        {
+            HeroProjectileVisual closest = null;
+            var closestDistance = float.MaxValue;
+            foreach (var candidate in Active)
+            {
+                if (candidate == null || candidate.arcaneBolt || candidate.resolved) continue;
+                var alignment = Vector3.Dot(candidate.travelDirection, direction);
+                if (alignment < 0.35f) continue;
+                var distance = (candidate.transform.position - position).sqrMagnitude + (1f - alignment) * 4f;
+                if (distance >= closestDistance) continue;
+                closestDistance = distance;
+                closest = candidate;
+            }
+            if (closest == null) return;
+            closest.resolved = true;
+            if (closest.fireball) closest.ReleaseFireballParticles();
+            Destroy(closest.gameObject);
+        }
+
         private void Update()
         {
             if (resolved) return;
@@ -1350,6 +1811,7 @@ namespace CoreKeepers
         {
             if (resolved) return;
             resolved = true;
+            groundPosition.y = 0f;
             transform.position = groundPosition + Vector3.up * 0.75f;
             if (impactOnArrival)
                 HeroCombatVfx.SpawnFireballImpact(groundPosition, impactSize, lingerDuration);

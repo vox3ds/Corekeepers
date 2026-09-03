@@ -119,8 +119,6 @@ namespace CoreKeepers
 
         private void UpdateWarning()
         {
-            var pulse = 0.94f + Mathf.Sin(age * 8f) * 0.06f;
-            marker.localScale = markerBaseScale * pulse;
             marker.Rotate(0f, 0f, 22f * Time.deltaTime, Space.Self);
 
             var fallStart = Mathf.Max(0f, impactDelay - fallDuration);
@@ -147,6 +145,7 @@ namespace CoreKeepers
             meteorSmoke.Stop(true, ParticleSystemStopBehavior.StopEmitting);
             explosion.Play(true);
             impactSmoke.Play(true);
+            HeroCombatVfx.SpawnMeteorGround(transform.position, radius);
             groundCrack.gameObject.SetActive(true);
             groundFlames.Play(true);
             shockwave.gameObject.SetActive(true);

@@ -1026,6 +1026,8 @@ MonoBehaviour:
   foundationVisual: {fileID: 1602990126862187869}
   completedVisual: {fileID: 5711897033377114851}
   maximumLevel: 3
+  healthBarBackgroundSprite: {fileID: 21300000, guid: 8b611b04801b373438a60d8cba7c25fb, type: 3}
+  healthBarFillSprite: {fileID: 21300000, guid: 0484d745f35da234fbcfdb99e4552a48, type: 3}
 --- !u!136 &5207424948877800380
 CapsuleCollider:
   m_ObjectHideFlags: 0

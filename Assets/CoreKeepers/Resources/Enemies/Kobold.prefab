@@ -95,6 +95,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 373e9da058f471b4c92852f7d654638e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3125665536818404619}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 373e9da058f471b4c92852f7d654638e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1945623660074352770}
   m_SourcePrefab: {fileID: 100100000, guid: 373e9da058f471b4c92852f7d654638e, type: 3}
 --- !u!1 &2613834189886003858 stripped
 GameObject:
@@ -290,7 +293,7 @@ MonoBehaviour:
   resistant_Swamp: 0
   resistant_OnFire: 0
   resistant_Poisoned: 0
-  chillSlow: 0.3
+  chillSlow: 0.5
   swampSlow: 0.3
   fireDuration: 5
   fireDamagePerSecond: 2
@@ -442,3 +445,20 @@ MonoBehaviour:
   - name: HeadAttack
     clip: {fileID: 171614144453502578, guid: 4581724ed54ffc8469c801befbae9bce, type: 3}
   blendDuration: 0.08
+--- !u!114 &1945623660074352770
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2613834189886003858}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 461d338569c3bee4d9f6edddf1aa9915, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CoreKeepers.EnemyHealthCircle
+  emptySprite: {fileID: 21300000, guid: eebf06dc564c378429f70a9e85d886e6, type: 3}
+  fullSprite: {fileID: 21300000, guid: 483e4271f8f12b54aa714bc9d4686582, type: 3}
+  visibilityThreshold: 0.95
+  worldOffset: {x: 0, y: 1.75, z: 0}
+  worldSize: 0.41

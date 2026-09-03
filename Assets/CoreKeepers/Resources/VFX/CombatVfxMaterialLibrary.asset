@@ -15,11 +15,14 @@ MonoBehaviour:
   explosion9x9: {fileID: 2100000, guid: 0de6dbf5971e04746ae7e8c98c55a316, type: 2}
   energyExplosion8x8: {fileID: 2100000, guid: 5dfeb1975ce2eef45a64dcb54778a567, type: 2}
   energyExplosion5x4: {fileID: 2100000, guid: 859fd0106971fd8449692e1b4e2dc541, type: 2}
+  electric3x4: {fileID: 2100000, guid: 268efe6466f448647bb12bbae15f8420, type: 2}
   darkEnergy8x5: {fileID: 2100000, guid: 866904daf5873364686ff8ed9506a4be, type: 2}
   flame8x4: {fileID: 2100000, guid: 9804f1870d7e7764d92906513d504255, type: 2}
   fireball8x5: {fileID: 2100000, guid: 9372e4a15c9b46646ae237549b98dc54, type: 2}
   smoke8x5: {fileID: 2100000, guid: fc569a6fef4f359488bc2286b7255a83, type: 2}
   groundFireCrack: {fileID: 2100000, guid: 5eac197313957044c86eb6b372228b3c, type: 2}
+  iceGround: {fileID: 2100000, guid: 6f58e02350a626049b02d82dfc4aee9d, type: 2}
+  meteorGround: {fileID: 2100000, guid: 2f1edc70b31ee704cb523f63d68bce39, type: 2}
   coldWind: {fileID: 2100000, guid: b853cef6bd378084fafd9d8ffbf8368f, type: 2}
   frostSpikesMaterial: {fileID: 2100000, guid: 9778353e2c2c94140bd36a3a3459b066, type: 2}
   frostSpikes: {fileID: 919132149155446097, guid: 1ceda94ed53a4234e93d36feadc5a16a, type: 3}

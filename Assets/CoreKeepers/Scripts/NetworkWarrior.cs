@@ -33,6 +33,7 @@ namespace CoreKeepers
     {
         private const int DefaultCarryingCapacity = 20;
         private const int BuilderCarryingCapacity = 30;
+        private const float MinimumIncomingDamage = 1f;
         private const ulong NoResurrector = ulong.MaxValue;
         private const float WhirlwindTurns = 15f;
 
@@ -66,7 +67,7 @@ namespace CoreKeepers
         [SerializeField, Min(1)] private int constructionPower = 15;
         [Header("Hero Stats")]
         [SerializeField, Min(1)] private int startingLevel = 1;
-        [SerializeField, Min(1f)] private float configuredMaximumHealth = 100f;
+        [SerializeField, Min(1f)] private float configuredMaximumHealth = 250f;
 
         private readonly NetworkVariable<WarriorAction> action = new(WarriorAction.None);
         private readonly NetworkVariable<double> actionStartedAt = new(0d);
@@ -90,6 +91,9 @@ namespace CoreKeepers
         private readonly NetworkVariable<Vector3> leapEnd = new(Vector3.zero);
         private readonly NetworkVariable<double> arcaneSpeedEndsAt = new(0d);
         private readonly NetworkVariable<float> arcaneSpeedMultiplier = new(1f);
+        private readonly NetworkVariable<Vector3> gravityVortexCenter = new(Vector3.zero);
+        private readonly NetworkVariable<double> gravityVortexEndsAt = new(0d);
+        private readonly NetworkVariable<float> gravityVortexStrength = new(0f);
         private NavMeshAgent agent;
         private NetworkObject interactionTarget;
         private ContextInteraction interaction;
@@ -126,6 +130,12 @@ namespace CoreKeepers
         private readonly List<TrailRenderer> arcaneTrails = new();
         private Material arcaneTrailMaterial;
         private bool arcaneSpeedVisualActive;
+        private bool gravityVortexMovementActive;
+        private bool gravityVortexRecoveryActive;
+        private float gravityVortexRecoveryStartedAt;
+        private Vector3 gravityVortexRecoveryStart;
+        private Vector3 gravityVortexRecoveryTarget;
+        private Vector3 gravityVortexVelocity;
         private static int lastDebugClassSwitchFrame = -1;
 
         public static NetworkWarrior Local { get; private set; }
@@ -141,11 +151,15 @@ namespace CoreKeepers
         public float MaximumHealth => maximumHealth.Value;
         public float HealthRatio => maximumHealth.Value > 0f ? currentHealth.Value / maximumHealth.Value : 0f;
         public string Nickname => nickname.Value.ToString();
-        public float NormalizedSpeed => normalizedSpeed;
+        public float NormalizedSpeed => IsGravityVortexed || gravityVortexMovementActive ||
+            gravityVortexRecoveryActive ? 0f : normalizedSpeed;
         public int ActionVariant => actionVariant.Value;
         public CorePlayerClass PlayerClass => syncedPlayerClass.Value;
+        public float Defense => GetBaseDefense(syncedPlayerClass.Value);
         public float InteractionRange => interactionRange;
         public bool IsDowned => downed.Value;
+        public bool IsGravityVortexed => IsSpawned && NetworkManager != null &&
+            NetworkManager.ServerTime.Time < gravityVortexEndsAt.Value;
         public bool IsArcaneSpeedActive => IsSpawned && NetworkManager != null &&
             NetworkManager.ServerTime.Time < arcaneSpeedEndsAt.Value;
         public bool IsBurning => burning.Value;
@@ -226,6 +240,7 @@ namespace CoreKeepers
             HeroCombatVfx.SetCharacterBurning(transform, false);
             SetArcaneSpeedVisual(false);
             if (agent != null) agent.speed = movementSpeed;
+            CancelLocalGravityVortex();
             if (IsServer) CancelResurrectionChannel();
             if (Local == this) Local = null;
         }
@@ -253,6 +268,18 @@ namespace CoreKeepers
                 if (action.Value == WarriorAction.BattleCharge)
                     FinishLeapRpc(leapEnd.Value);
                 action.Value = WarriorAction.None;
+            }
+            if (IsOwner && IsGravityVortexed)
+            {
+                UpdateLocalGravityVortex();
+                return;
+            }
+            if (IsOwner && gravityVortexMovementActive)
+                BeginLocalGravityVortexRecovery();
+            if (IsOwner && gravityVortexRecoveryActive)
+            {
+                UpdateLocalGravityVortexRecovery();
+                return;
             }
             if (!IsOwner || SceneManager.GetActiveScene().name != CoreSessionManager.DebugSceneName)
                 return;
@@ -369,7 +396,8 @@ namespace CoreKeepers
             if (!ShouldContinue()) { ClearInteraction(); return; }
             var targetPosition = interactionTarget.transform.position;
             agent.SetDestination(targetPosition);
-            var offset = targetPosition - transform.position;
+            var interactionPoint = GetInteractionPoint(interactionTarget, interaction, transform.position);
+            var offset = interactionPoint - transform.position;
             offset.y = 0f;
             if (offset.magnitude > GetRange(interaction)) return;
             agent.ResetPath();
@@ -422,6 +450,16 @@ namespace CoreKeepers
             ContextInteraction.BuildOrRepair => buildRange,
             _ => interactionRange
         };
+
+        private static Vector3 GetInteractionPoint(NetworkObject target, ContextInteraction type, Vector3 origin)
+        {
+            if (target == null || type != ContextInteraction.BuildOrRepair)
+                return target != null ? target.transform.position : origin;
+
+            var buildingCollider = target.GetComponent<Collider>();
+            return buildingCollider != null ? buildingCollider.ClosestPoint(origin) : target.transform.position;
+        }
+
         private float GetCooldown(ContextInteraction type)
         {
             var passiveMultiplier = heroSkills == null ? 1f : type switch
@@ -464,8 +502,9 @@ namespace CoreKeepers
         [Rpc(SendTo.Server)]
         private void PerformContextInteractionRpc(NetworkObjectReference reference, ContextInteraction requested)
         {
-            if (downed.Value || !reference.TryGet(out var target)) return;
-            var offset = target.transform.position - transform.position; offset.y = 0f;
+            if (downed.Value || IsGravityVortexed || !reference.TryGet(out var target)) return;
+            var interactionPoint = GetInteractionPoint(target, requested, transform.position);
+            var offset = interactionPoint - transform.position; offset.y = 0f;
             var range = GetRange(requested);
             if (offset.magnitude > range + 0.35f) return;
             switch (requested)
@@ -529,8 +568,89 @@ namespace CoreKeepers
 
         public void ServerPlaySkillAction(WarriorAction requested, float duration)
         {
-            if (!IsServer || duration <= 0f) return;
+            if (!IsServer || IsGravityVortexed || duration <= 0f) return;
             BeginServerAction(requested, duration);
+        }
+
+        public void ServerApplyGravityVortex(Vector3 center, float strength, float duration)
+        {
+            if (!IsServer || downed.Value || duration <= 0f) return;
+            var now = NetworkManager.ServerTime.Time;
+            center.y = transform.position.y;
+            gravityVortexCenter.Value = center;
+            gravityVortexStrength.Value = Mathf.Max(gravityVortexStrength.Value, strength);
+            gravityVortexEndsAt.Value = System.Math.Max(gravityVortexEndsAt.Value,
+                now + duration);
+            action.Value = WarriorAction.None;
+            actionVariant.Value = 0;
+            actionStartedAt.Value = now;
+            actionEndsAt.Value = now;
+            CancelResurrectionChannel();
+            ClearInteraction();
+        }
+
+        private void UpdateLocalGravityVortex()
+        {
+            if (!gravityVortexMovementActive)
+            {
+                gravityVortexMovementActive = true;
+                gravityVortexRecoveryActive = false;
+                gravityVortexVelocity = Vector3.zero;
+                leapMovementActive = false;
+                whirlwindMovementActive = false;
+                ClearInteraction();
+                if (agent != null && agent.enabled)
+                {
+                    if (agent.isOnNavMesh) agent.ResetPath();
+                    agent.enabled = false;
+                }
+            }
+
+            var offset = gravityVortexCenter.Value - transform.position;
+            offset.y = 0f;
+            if (offset.sqrMagnitude > 0.01f)
+            {
+                var acceleration = Mathf.Max(10f, gravityVortexStrength.Value * 12f);
+                gravityVortexVelocity += offset.normalized * acceleration * Time.deltaTime;
+                gravityVortexVelocity = Vector3.ClampMagnitude(gravityVortexVelocity,
+                    Mathf.Max(5f, gravityVortexStrength.Value * 4.5f));
+            }
+            gravityVortexVelocity *= Mathf.Exp(-2.2f * Time.deltaTime);
+            transform.position += gravityVortexVelocity * Time.deltaTime;
+        }
+
+        private void BeginLocalGravityVortexRecovery()
+        {
+            if (!gravityVortexMovementActive) return;
+            gravityVortexMovementActive = false;
+            gravityVortexVelocity = Vector3.zero;
+            gravityVortexRecoveryActive = true;
+            gravityVortexRecoveryStartedAt = Time.time;
+            gravityVortexRecoveryStart = transform.position;
+            gravityVortexRecoveryTarget = transform.position;
+            if (NavMesh.SamplePosition(transform.position, out var hit, 2.5f, NavMesh.AllAreas))
+                gravityVortexRecoveryTarget = hit.position;
+        }
+
+        private void UpdateLocalGravityVortexRecovery()
+        {
+            const float recoveryDuration = 0.4f;
+            var progress = Mathf.Clamp01((Time.time - gravityVortexRecoveryStartedAt) / recoveryDuration);
+            transform.position = Vector3.Lerp(gravityVortexRecoveryStart, gravityVortexRecoveryTarget,
+                Mathf.SmoothStep(0f, 1f, progress));
+            if (progress < 1f) return;
+
+            gravityVortexRecoveryActive = false;
+            if (agent == null) return;
+            agent.enabled = true;
+            if (agent.isOnNavMesh) agent.ResetPath();
+        }
+
+        private void CancelLocalGravityVortex()
+        {
+            gravityVortexMovementActive = false;
+            gravityVortexRecoveryActive = false;
+            gravityVortexVelocity = Vector3.zero;
         }
 
         public void ServerPresentSkill(HeroSkillDefinition skill, Vector3 point, NetworkObject target)
@@ -558,7 +678,10 @@ namespace CoreKeepers
             {
                 var aimPoint = target != null ? target.transform.position + Vector3.up * 0.75f : point + Vector3.up * 0.75f;
                 var direction = aimPoint - origin;
+                direction.y = 0f;
                 if (direction.sqrMagnitude < 0.001f) direction = transform.forward;
+                direction.y = 0f;
+                if (direction.sqrMagnitude < 0.001f) direction = Vector3.forward;
                 point = origin + direction.normalized * Mathf.Max(1f, skill.Radius);
                 target = null;
             }
@@ -811,6 +934,7 @@ namespace CoreKeepers
             if (!IsServer || downed.Value || amount <= 0f) return;
             amount = heroSkills != null ? heroSkills.ModifyIncomingDamage(amount) : amount;
             if (amount <= 0f) return;
+            amount = Mathf.Max(MinimumIncomingDamage, amount - Defense);
             damageRevision++;
             CancelResurrectionChannel();
             currentHealth.Value = Mathf.Max(0f, currentHealth.Value - amount);
@@ -1234,6 +1358,13 @@ namespace CoreKeepers
 
         private static int GetCarryingCapacity(CorePlayerClass requestedClass) =>
             requestedClass == CorePlayerClass.Builder ? BuilderCarryingCapacity : DefaultCarryingCapacity;
+
+        private static float GetBaseDefense(CorePlayerClass requestedClass) => requestedClass switch
+        {
+            CorePlayerClass.Warrior => 5f,
+            CorePlayerClass.Builder => 3f,
+            _ => 0f
+        };
 
         private static string GetClassPrefabPath(CorePlayerClass requestedClass) => requestedClass switch
         {
